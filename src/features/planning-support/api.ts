@@ -1,0 +1,300 @@
+import { apiRequest } from "../../shared/api/client";
+import type {
+  DailyPlanTask,
+  ExamSchedule,
+  ExamType,
+  FutureVision,
+  Timetable,
+} from "../core-loop/types";
+
+type AuthenticatedRequest = {
+  token: string;
+};
+
+type MorningTaskRequest = AuthenticatedRequest & {
+  dailyPlanId: string;
+  taskId: string;
+};
+
+type TimeRange = {
+  startTime: string;
+  endTime: string;
+};
+
+export type FutureVisionForm = {
+  weeklyVisionImage: File;
+  yearlyVisionImage: File;
+  yearlyVisionDescription: string;
+};
+
+export type ExamScheduleRequest = {
+  examType: ExamType;
+  title: string;
+  examDate: string;
+  subject: string;
+};
+
+function appendFutureVisionForm(form: FormData, values: FutureVisionForm) {
+  form.append("weeklyVisionImageUrl", values.weeklyVisionImage);
+  form.append("yearlyVisionImageUrl", values.yearlyVisionImage);
+  form.append("yearlyVisionDescription", values.yearlyVisionDescription);
+}
+
+export function getFutureVision({ token }: AuthenticatedRequest) {
+  return apiRequest<FutureVision>("/future-vision", { token });
+}
+
+export function createFutureVision({
+  token,
+  values,
+}: AuthenticatedRequest & { values: FutureVisionForm }) {
+  const form = new FormData();
+  appendFutureVisionForm(form, values);
+
+  return apiRequest<void>("/future-vision", {
+    body: form,
+    method: "POST",
+    token,
+  });
+}
+
+export function updateWeeklyFutureVision({
+  token,
+  weeklyVisionImage,
+}: AuthenticatedRequest & { weeklyVisionImage: File }) {
+  const form = new FormData();
+  form.append("weeklyVisionImageUrl", weeklyVisionImage);
+
+  return apiRequest<void>("/future-vision/weekly", {
+    body: form,
+    method: "PATCH",
+    token,
+  });
+}
+
+export function updateYearlyFutureVision({
+  token,
+  yearlyVisionDescription,
+  yearlyVisionImage,
+}: AuthenticatedRequest & {
+  yearlyVisionDescription: string;
+  yearlyVisionImage: File;
+}) {
+  const form = new FormData();
+  form.append("yearlyVisionImageUrl", yearlyVisionImage);
+  form.append("yearlyVisionDescription", yearlyVisionDescription);
+
+  return apiRequest<void>("/future-vision/yearly", {
+    body: form,
+    method: "PATCH",
+    token,
+  });
+}
+
+export function createMorningTask({
+  content,
+  targetDate,
+  token,
+}: AuthenticatedRequest & { content: string; targetDate: string }) {
+  return apiRequest<void>(`/morning-tasks?targetDate=${targetDate}`, {
+    body: { content },
+    method: "POST",
+    token,
+  });
+}
+
+export function getMorningTasks({
+  targetDate,
+  token,
+}: AuthenticatedRequest & { targetDate: string }) {
+  return apiRequest<DailyPlanTask[]>(`/morning-tasks?targetDate=${targetDate}`, {
+    token,
+  });
+}
+
+export function updateMorningTask({
+  content,
+  dailyPlanId,
+  taskId,
+  token,
+}: MorningTaskRequest & { content: string }) {
+  return apiRequest<void>(`/morning-tasks/${dailyPlanId}/${taskId}`, {
+    body: { content },
+    method: "PUT",
+    token,
+  });
+}
+
+export function deleteMorningTask({
+  dailyPlanId,
+  taskId,
+  token,
+}: MorningTaskRequest) {
+  return apiRequest<void>(`/morning-tasks/${dailyPlanId}/${taskId}`, {
+    method: "DELETE",
+    token,
+  });
+}
+
+export function completeMorningTask({
+  dailyPlanId,
+  taskId,
+  token,
+}: MorningTaskRequest) {
+  return apiRequest<void>(`/morning-tasks/${dailyPlanId}/${taskId}/complete`, {
+    method: "PATCH",
+    token,
+  });
+}
+
+export function uncompleteMorningTask({
+  dailyPlanId,
+  taskId,
+  token,
+}: MorningTaskRequest) {
+  return apiRequest<void>(
+    `/morning-tasks/${dailyPlanId}/${taskId}/uncomplete`,
+    {
+      method: "PATCH",
+      token,
+    },
+  );
+}
+
+export function getTimetable({
+  dailyPlanId,
+  token,
+}: AuthenticatedRequest & { dailyPlanId: string }) {
+  return apiRequest<Timetable>(`/timetables?dailyPlanId=${dailyPlanId}`, {
+    token,
+  });
+}
+
+export function assignTopPickSlot({
+  taskId,
+  timetableId,
+  token,
+  ...timeRange
+}: AuthenticatedRequest &
+  TimeRange & {
+    taskId: string;
+    timetableId: string;
+  }) {
+  return apiRequest<void>(
+    `/timetables/${timetableId}/slots/tasks/${taskId}/top-picks`,
+    {
+      body: timeRange,
+      method: "POST",
+      token,
+    },
+  );
+}
+
+export function assignTaskSlot({
+  taskId,
+  timetableId,
+  token,
+  ...timeRange
+}: AuthenticatedRequest &
+  TimeRange & {
+    taskId: string;
+    timetableId: string;
+  }) {
+  return apiRequest<void>(`/timetables/${timetableId}/slots/tasks/${taskId}`, {
+    body: timeRange,
+    method: "POST",
+    token,
+  });
+}
+
+export function createDirectSlot({
+  content,
+  dailyPlanId,
+  timetableId,
+  token,
+  ...timeRange
+}: AuthenticatedRequest &
+  TimeRange & {
+    content: string;
+    dailyPlanId: string;
+    timetableId: string;
+  }) {
+  return apiRequest<void>(
+    `/timetables/${timetableId}/slots/daily-plans/${dailyPlanId}/direct`,
+    {
+      body: { content, ...timeRange },
+      method: "POST",
+      token,
+    },
+  );
+}
+
+export function rescheduleSlot({
+  slotId,
+  timetableId,
+  token,
+  ...timeRange
+}: AuthenticatedRequest &
+  TimeRange & {
+    slotId: string;
+    timetableId: string;
+  }) {
+  return apiRequest<void>(`/timetables/${timetableId}/slots/${slotId}/reschedule`, {
+    body: timeRange,
+    method: "PATCH",
+    token,
+  });
+}
+
+export function deleteSlot({
+  slotId,
+  timetableId,
+  token,
+}: AuthenticatedRequest & { slotId: string; timetableId: string }) {
+  return apiRequest<void>(`/timetables/${timetableId}/slots/${slotId}`, {
+    method: "DELETE",
+    token,
+  });
+}
+
+export function getExamSchedules({ token }: AuthenticatedRequest) {
+  return apiRequest<ExamSchedule[]>("/exam-schedules", { token });
+}
+
+export function createExamSchedule({
+  token,
+  values,
+}: AuthenticatedRequest & { values: ExamScheduleRequest }) {
+  return apiRequest<ExamSchedule>("/exam-schedules", {
+    body: values,
+    method: "POST",
+    token,
+  });
+}
+
+export function updateExamSchedule({
+  examScheduleId,
+  token,
+  values,
+}: AuthenticatedRequest & {
+  examScheduleId: string;
+  values: ExamScheduleRequest;
+}) {
+  return apiRequest<ExamSchedule>(`/exam-schedules/${examScheduleId}`, {
+    body: values,
+    method: "PATCH",
+    token,
+  });
+}
+
+export function deleteExamSchedule({
+  examScheduleId,
+  token,
+}: AuthenticatedRequest & { examScheduleId: string }) {
+  return apiRequest<void>(`/exam-schedules/${examScheduleId}`, {
+    method: "DELETE",
+    token,
+  });
+}
+
+export type { DailyPlanTask };

@@ -1,0 +1,1432 @@
+.page {
+  display: grid;
+  height: 100vh;
+  height: 100dvh;
+  min-height: 100vh;
+  min-height: 100dvh;
+  overflow: hidden;
+  grid-template-columns: 232px minmax(0, 1fr);
+  color: var(--color-ink);
+  background:
+    radial-gradient(circle at 88% 8%, rgba(223, 243, 230, 0.58), transparent 28%),
+    linear-gradient(135deg, #ffffff 0%, #fbfdf9 48%, #f3f8ef 100%);
+}
+
+.contentShell {
+  position: relative;
+  display: grid;
+  min-width: 0;
+  min-height: 0;
+  align-content: start;
+  gap: 16px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding: 28px clamp(28px, 5vw, 56px) 38px;
+}
+
+.pageHeader,
+.composerHeader,
+.editPanel {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.pageHeader h1 {
+  margin: 0;
+  color: #14201a;
+  font-size: 2rem;
+  font-weight: 500;
+  letter-spacing: 0;
+  line-height: 1.15;
+}
+
+.pageHeader p {
+  margin: 8px 0 0;
+  color: var(--color-muted);
+  font-size: var(--font-size-body-sm);
+}
+
+.headerActions {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.plannedTimeBadge {
+  display: inline-flex;
+  min-height: 46px;
+  align-items: center;
+  gap: 10px;
+  padding: 0 16px;
+  border: 1px solid rgba(220, 231, 216, 0.86);
+  border-radius: var(--radius-pill);
+  color: var(--color-body);
+  background: rgba(255, 255, 255, 0.82);
+  box-shadow: 0 12px 26px rgba(31, 42, 33, 0.05);
+  white-space: nowrap;
+}
+
+.plannedTimeBadge span {
+  color: var(--color-muted);
+  font-size: var(--font-size-caption);
+}
+
+.plannedTimeBadge strong {
+  color: var(--color-primary-active);
+  font-size: var(--font-size-body);
+  font-weight: 500;
+}
+
+.dateButton,
+.dateNavigator button,
+.composerHeader button,
+.slotActions button {
+  display: inline-grid;
+  place-items: center;
+  border: 1px solid var(--color-hairline-soft);
+  color: var(--color-primary-active);
+  background: rgba(255, 255, 255, 0.86);
+  cursor: pointer;
+}
+
+.dateButton {
+  min-height: 46px;
+  grid-auto-flow: column;
+  gap: 8px;
+  padding: 0 18px;
+  border-radius: var(--radius-pill);
+  font-size: var(--font-size-body-sm);
+  white-space: nowrap;
+}
+
+.dateButton svg,
+.dateNavigator svg,
+.slotActions svg,
+.composerHeader svg,
+.addBlockButton svg,
+.tipBand svg {
+  width: 18px;
+  height: 18px;
+}
+
+.dateNavigator {
+  display: grid;
+  min-height: 78px;
+  grid-template-columns: 44px minmax(0, 1fr) 44px;
+  align-items: center;
+  gap: 18px;
+  padding: 0 24px;
+  border: 1px solid rgba(220, 231, 216, 0.86);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.82);
+  box-shadow: 0 18px 36px rgba(31, 42, 33, 0.05);
+}
+
+.dateNavigator button {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-full);
+  background: transparent;
+}
+
+.dateNavigator time {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  overflow: hidden;
+  color: var(--color-primary-active);
+  font-size: 1.26rem;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.plannerLayout {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 320px);
+  align-items: start;
+  gap: 20px;
+}
+
+.taskDock {
+  display: grid;
+  grid-column: 2;
+  grid-row: 1;
+  gap: 14px;
+  max-height: calc(100dvh - 124px);
+  overflow-y: auto;
+  padding: 18px 20px;
+  border: 1px solid rgba(220, 231, 216, 0.82);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.78);
+  box-shadow: 0 14px 30px rgba(31, 42, 33, 0.04);
+  position: sticky;
+  top: 16px;
+}
+
+.taskDockHeader {
+  display: grid;
+  min-width: 0;
+  gap: 8px;
+}
+
+.taskDockHeader p,
+.taskDockHeader h2,
+.emptyDockText {
+  margin: 0;
+}
+
+.taskDockHeader p {
+  color: var(--color-primary-active);
+  font-size: var(--font-size-caption);
+}
+
+.taskDockHeader h2 {
+  color: var(--color-ink);
+  font-size: var(--font-size-title);
+  font-weight: 500;
+}
+
+.taskDockHeader span,
+.emptyDockText {
+  color: var(--color-muted);
+  font-size: var(--font-size-body-sm);
+}
+
+.sourceList {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 10px;
+}
+
+.sourceCard {
+  display: grid;
+  min-height: 84px;
+  gap: 4px;
+  justify-items: start;
+  padding: 13px 14px;
+  border: 1px solid rgba(220, 231, 216, 0.9);
+  border-radius: 14px;
+  color: var(--color-body);
+  background: linear-gradient(120deg, rgba(255, 255, 255, 0.96), rgba(248, 251, 245, 0.74));
+  cursor: grab;
+  text-align: left;
+  transition:
+    border-color 140ms ease,
+    box-shadow 140ms ease,
+    transform 140ms ease;
+  will-change: transform;
+}
+
+.sourceCard[aria-pressed="true"] {
+  border-color: rgba(47, 158, 91, 0.5);
+  color: var(--color-primary-active);
+  background: var(--color-primary-pale);
+  box-shadow: inset 0 0 0 1px rgba(47, 158, 91, 0.14);
+}
+
+.sourceCard:active {
+  cursor: grabbing;
+}
+
+.sourceCard:disabled {
+  cursor: not-allowed;
+  opacity: 0.58;
+}
+
+.sourceCard span {
+  display: inline-flex;
+  min-height: 22px;
+  align-items: center;
+  padding: 0 8px;
+  border-radius: var(--radius-pill);
+  color: var(--color-primary-active);
+  background: var(--color-primary-pale);
+  font-size: 0.72rem;
+}
+
+.sourceTopPick span {
+  color: #247a47;
+  background: #e4f4eb;
+}
+
+.sourceCard strong {
+  overflow: hidden;
+  max-width: 100%;
+  color: var(--color-ink);
+  font-size: var(--font-size-body-sm);
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sourceCard small {
+  color: var(--color-muted);
+  font-size: 0.76rem;
+}
+
+.timelineSection {
+  display: grid;
+  grid-column: 1;
+  grid-row: 1;
+  min-width: 0;
+}
+
+.timelineGrid {
+  position: relative;
+  display: grid;
+  min-width: 0;
+  grid-template-columns: 74px minmax(0, 1fr);
+  gap: 20px;
+  padding-bottom: 38px;
+}
+
+.timeRail {
+  position: relative;
+  padding: 0;
+  margin: 0;
+  color: #425063;
+  font-size: var(--font-size-body-sm);
+  list-style: none;
+}
+
+.timeRail li {
+  position: absolute;
+  right: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+  padding-top: 4px;
+  transform: translateY(-4px);
+}
+
+.timelineCanvas {
+  position: relative;
+  min-width: 0;
+  min-height: inherit;
+  border-left: 1px solid rgba(220, 231, 216, 0.88);
+  contain: layout paint style;
+}
+
+.timelineSelecting {
+  cursor: copy;
+}
+
+.timelineBlocked {
+  box-shadow: inset 0 0 0 2px rgba(207, 61, 79, 0.18);
+}
+
+.gridLine {
+  position: absolute;
+  right: 0;
+  left: 0;
+  height: 1px;
+  border-top: 1px dashed rgba(220, 231, 216, 0.92);
+}
+
+.timelineHint,
+.selectedDraftHint {
+  position: absolute;
+  right: 18px;
+  left: 74px;
+  display: grid;
+  place-items: center;
+  border-radius: 18px;
+  text-align: center;
+  pointer-events: none;
+}
+
+.timelineHint {
+  top: 26px;
+  min-height: 118px;
+  border: 1px dashed rgba(47, 158, 91, 0.28);
+  color: var(--color-muted);
+  background: rgba(255, 255, 255, 0.58);
+}
+
+.timelineHint strong {
+  color: var(--color-ink);
+  font-size: var(--font-size-body);
+  font-weight: 500;
+}
+
+.timelineHint span {
+  font-size: var(--font-size-body-sm);
+}
+
+.selectedDraftHint {
+  top: -12px;
+  left: 74px;
+  z-index: 2;
+  width: max-content;
+  min-height: 32px;
+  padding: 0 12px;
+  color: var(--color-primary-active);
+  background: var(--color-primary-pale);
+  font-size: var(--font-size-caption);
+}
+
+.slotBlock {
+  --slot-accent: #2f80ed;
+  --slot-accent-deep: #176de0;
+  --slot-border: rgba(47, 128, 237, 0.26);
+  --slot-duration-bg: rgba(226, 239, 255, 0.9);
+  --slot-shadow: rgba(47, 128, 237, 0.1);
+  --slot-surface-a: rgba(244, 249, 255, 0.98);
+  --slot-surface-b: rgba(255, 255, 255, 0.93);
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 74px;
+  display: grid;
+  min-height: 52px;
+  grid-template-columns: 46px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  overflow: hidden;
+  padding: 9px 14px 9px 24px;
+  border: 1px solid var(--slot-border);
+  border-radius: 18px;
+  color: #435066;
+  background: linear-gradient(105deg, var(--slot-surface-a), var(--slot-surface-b));
+  box-shadow:
+    0 16px 34px rgba(31, 42, 58, 0.06),
+    0 5px 14px var(--slot-shadow);
+  cursor: move;
+  touch-action: none;
+  user-select: none;
+  contain: layout paint;
+  will-change: transform, height;
+}
+
+.slotBlock::before {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 8px;
+  background: linear-gradient(180deg, var(--slot-accent), var(--slot-accent-deep));
+  content: "";
+}
+
+.slotBlockDragging {
+  z-index: 3;
+  box-shadow:
+    0 22px 42px rgba(31, 42, 58, 0.13),
+    0 8px 18px var(--slot-shadow);
+}
+
+.slotCompleted {
+  opacity: 0.72;
+}
+
+.slotCompleted .slotMain strong {
+  text-decoration: line-through;
+}
+
+.slotBlockCompact {
+  min-height: 46px;
+  grid-template-columns: 34px minmax(0, 1fr) auto;
+  align-content: center;
+  gap: 10px;
+  padding-top: 5px;
+  padding-bottom: 5px;
+  border-radius: 14px;
+}
+
+.slotBlockCompact .slotMain {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.slotBlockCompact .slotTitleRow strong {
+  font-size: 0.92rem;
+}
+
+.slotBlockCompact .slotTopPickBadge {
+  min-height: 20px;
+  padding: 0 7px;
+  font-size: 0.68rem;
+}
+
+.slotIcon {
+  display: grid;
+  position: relative;
+  z-index: 1;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  border-radius: 12px;
+  color: #ffffff;
+  background: linear-gradient(135deg, var(--slot-accent), var(--slot-accent-deep));
+  box-shadow: 0 10px 18px var(--slot-shadow);
+  flex: 0 0 auto;
+}
+
+.slotIcon svg {
+  width: 22px;
+  height: 22px;
+}
+
+.slotBlockCompact .slotIcon {
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+}
+
+.slotBlockCompact .slotIcon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.slotMain {
+  display: grid;
+  position: relative;
+  z-index: 1;
+  min-width: 0;
+  gap: 8px;
+}
+
+.slotTitleRow {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
+}
+
+.slotTitleRow strong {
+  min-width: 0;
+  overflow: hidden;
+  color: #121821;
+  font-size: 1rem;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.slotTopPickBadge,
+.memoButton {
+  display: inline-flex;
+  min-height: 22px;
+  align-items: center;
+  border-radius: var(--radius-pill);
+  font-size: 0.72rem;
+  white-space: nowrap;
+}
+
+.slotTopPickBadge {
+  flex: 0 0 auto;
+  padding: 0 9px;
+  color: #247a47;
+  background: #e4f4eb;
+  box-shadow: inset 0 0 0 1px rgba(47, 158, 91, 0.12);
+}
+
+.slotMetaRow {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 7px;
+  color: #667085;
+}
+
+.slotMetaRow svg {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+}
+
+.slotMetaRow time {
+  color: inherit;
+  font-size: 0.88rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.slotBlockCompact .slotMetaRow {
+  display: none;
+}
+
+.memoButton {
+  padding: 0 7px;
+  border: 1px solid rgba(47, 158, 91, 0.18);
+  color: var(--color-primary-active);
+  background: rgba(255, 255, 255, 0.72);
+  cursor: pointer;
+}
+
+.memoButton:hover,
+.memoButton:focus-visible {
+  background: var(--color-primary-pale);
+}
+
+.slotControls {
+  display: flex;
+  position: relative;
+  z-index: 1;
+  min-width: max-content;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  flex: 0 0 auto;
+}
+
+.slotDuration {
+  display: inline-flex;
+  min-height: 30px;
+  align-items: center;
+  gap: 6px;
+  padding: 0 11px;
+  border-radius: var(--radius-pill);
+  color: var(--slot-accent-deep);
+  background: var(--slot-duration-bg);
+  font-size: var(--font-size-body-sm);
+  font-weight: 700;
+  white-space: nowrap;
+  flex: 0 0 auto;
+}
+
+.slotDuration svg {
+  width: 16px;
+  height: 16px;
+}
+
+.slotBlockCompact .slotDuration {
+  display: inline-flex;
+  min-height: 26px;
+  padding: 0 9px;
+  font-size: 0.72rem;
+}
+
+.slotBlockCompact .slotDuration svg {
+  display: none;
+}
+
+.slotActions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  flex: 0 0 auto;
+}
+
+.slotActions button {
+  position: relative;
+  display: inline-flex;
+  width: 34px;
+  height: 34px;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border-radius: var(--radius-full);
+  border-color: rgba(210, 220, 232, 0.86);
+  color: #234260;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 8px 18px rgba(31, 42, 58, 0.07);
+  flex: 0 0 auto;
+  transition:
+    border-color 140ms ease,
+    box-shadow 140ms ease,
+    color 140ms ease,
+    transform 140ms ease;
+}
+
+.slotActions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.42;
+  transform: none;
+}
+
+.slotActions svg {
+  width: 18px;
+  height: 18px;
+}
+
+.slotBlockCompact .slotActions {
+  gap: 5px;
+}
+
+.slotBlockCompact .slotActions button {
+  width: 30px;
+  height: 30px;
+  box-shadow: 0 5px 12px rgba(31, 42, 58, 0.06);
+}
+
+.slotBlockCompact .slotActions svg {
+  width: 16px;
+  height: 16px;
+}
+
+.completeSlotButton {
+  color: var(--slot-accent-deep);
+}
+
+.editSlotButton:disabled {
+  display: none;
+}
+
+.deleteSlotButton {
+  border-color: rgba(255, 48, 79, 0.22);
+  color: #ff304f;
+}
+
+.slotActions button span {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.resizeHandleTop,
+.resizeHandleBottom {
+  position: absolute;
+  left: 50%;
+  z-index: 4;
+  width: clamp(96px, 18%, 136px);
+  height: 12px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  cursor: ns-resize;
+  opacity: 0;
+  transform: translateX(-50%);
+  transition: opacity 140ms ease;
+}
+
+.resizeHandleTop {
+  top: 0;
+}
+
+.resizeHandleBottom {
+  bottom: 0;
+}
+
+.resizeHandleTop::after,
+.resizeHandleBottom::after {
+  position: absolute;
+  right: 0;
+  left: 0;
+  height: 3px;
+  border-radius: var(--radius-pill);
+  background: rgba(77, 90, 78, 0.22);
+  content: "";
+}
+
+.resizeHandleTop::after {
+  top: 3px;
+}
+
+.resizeHandleBottom::after {
+  bottom: 3px;
+}
+
+.slotBlock:hover .resizeHandleTop,
+.slotBlock:hover .resizeHandleBottom,
+.resizeHandleTop:focus-visible,
+.resizeHandleBottom:focus-visible {
+  opacity: 1;
+}
+
+.resizeHandleTop:hover::after,
+.resizeHandleTop:focus-visible::after,
+.resizeHandleBottom:hover::after,
+.resizeHandleBottom:focus-visible::after {
+  background: var(--color-primary);
+}
+
+.slotActions button:hover,
+.slotActions button:focus-visible {
+  border-color: var(--slot-border);
+  color: var(--slot-accent-deep);
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 12px 22px rgba(31, 42, 58, 0.1);
+  transform: translateY(-1px);
+}
+
+.deleteSlotButton:hover,
+.deleteSlotButton:focus-visible {
+  border-color: rgba(255, 48, 79, 0.34);
+  color: #ff304f;
+  background: #fff5f6;
+}
+
+.dateNavigator button:hover,
+.dateNavigator button:focus-visible,
+.dateButton:hover,
+.dateButton:focus-visible {
+  color: var(--color-primary-active);
+  background: var(--color-primary-pale);
+}
+
+.slotGreen {
+  --slot-accent: #2f9e5b;
+  --slot-accent-deep: #247a47;
+  --slot-border: rgba(47, 158, 91, 0.28);
+  --slot-duration-bg: rgba(228, 244, 235, 0.94);
+  --slot-shadow: rgba(47, 158, 91, 0.12);
+  --slot-surface-a: rgba(240, 249, 236, 0.98);
+  --slot-surface-b: rgba(255, 255, 255, 0.94);
+}
+
+.slotBlue {
+  --slot-accent: #2f80ed;
+  --slot-accent-deep: #176de0;
+  --slot-border: rgba(47, 128, 237, 0.28);
+  --slot-duration-bg: rgba(226, 239, 255, 0.94);
+  --slot-shadow: rgba(47, 128, 237, 0.12);
+  --slot-surface-a: rgba(239, 247, 255, 0.98);
+  --slot-surface-b: rgba(255, 255, 255, 0.94);
+}
+
+.slotAmber {
+  --slot-accent: #d99a12;
+  --slot-accent-deep: #b47600;
+  --slot-border: rgba(217, 154, 18, 0.3);
+  --slot-duration-bg: rgba(255, 241, 202, 0.94);
+  --slot-shadow: rgba(217, 154, 18, 0.12);
+  --slot-surface-a: rgba(255, 249, 235, 0.98);
+  --slot-surface-b: rgba(255, 255, 255, 0.94);
+}
+
+.slotPurple {
+  --slot-accent: #8060d8;
+  --slot-accent-deep: #6345bd;
+  --slot-border: rgba(128, 96, 216, 0.28);
+  --slot-duration-bg: rgba(239, 232, 255, 0.94);
+  --slot-shadow: rgba(128, 96, 216, 0.11);
+  --slot-surface-a: rgba(248, 241, 255, 0.98);
+  --slot-surface-b: rgba(255, 255, 255, 0.94);
+}
+
+.slotRose {
+  --slot-accent: #e8517a;
+  --slot-accent-deep: #cc365f;
+  --slot-border: rgba(232, 81, 122, 0.28);
+  --slot-duration-bg: rgba(255, 229, 238, 0.94);
+  --slot-shadow: rgba(232, 81, 122, 0.11);
+  --slot-surface-a: rgba(255, 241, 247, 0.98);
+  --slot-surface-b: rgba(255, 255, 255, 0.94);
+}
+
+.slotTeal {
+  --slot-accent: #2d9c8d;
+  --slot-accent-deep: #19786c;
+  --slot-border: rgba(45, 156, 141, 0.28);
+  --slot-duration-bg: rgba(222, 246, 242, 0.94);
+  --slot-shadow: rgba(45, 156, 141, 0.11);
+  --slot-surface-a: rgba(238, 250, 247, 0.98);
+  --slot-surface-b: rgba(255, 255, 255, 0.94);
+}
+
+.addBlockButton {
+  display: inline-flex;
+  width: 100%;
+  min-height: 56px;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  border: 1px dashed rgba(47, 158, 91, 0.38);
+  border-radius: 22px;
+  color: var(--color-primary-active);
+  background: rgba(255, 255, 255, 0.72);
+  font-size: var(--font-size-body);
+  cursor: pointer;
+}
+
+.addBlockButton svg {
+  width: 26px;
+  height: 26px;
+  padding: 5px;
+  border-radius: var(--radius-full);
+  color: var(--color-on-primary);
+  background: var(--color-primary);
+}
+
+.composerModal,
+.memoModal,
+.taskEditModal,
+.editPanel,
+.tipBand,
+.timelineLoading,
+.emptyPanel {
+  border: 1px solid rgba(220, 231, 216, 0.82);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.84);
+  box-shadow: 0 18px 36px rgba(31, 42, 33, 0.05);
+}
+
+.modalBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 5;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(20, 32, 26, 0.22);
+  backdrop-filter: blur(4px);
+}
+
+.composerModal {
+  display: grid;
+  width: min(760px, 100%);
+  max-height: calc(100dvh - 48px);
+  gap: 18px;
+  overflow-y: auto;
+  padding: 22px;
+}
+
+.memoModal {
+  display: grid;
+  width: min(520px, 100%);
+  gap: 16px;
+  padding: 22px;
+}
+
+.taskEditModal {
+  display: grid;
+  width: min(520px, 100%);
+  gap: 18px;
+  padding: 22px;
+}
+
+.memoModal > p {
+  margin: 0;
+  padding: 16px;
+  border-radius: 16px;
+  color: var(--color-body);
+  background: var(--color-primary-pale);
+  font-size: var(--font-size-body-sm);
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+.composerHeader p,
+.editPanel p {
+  margin: 0 0 4px;
+  color: var(--color-primary-active);
+  font-size: var(--font-size-caption);
+}
+
+.composerHeader h2,
+.editPanel strong {
+  margin: 0;
+  color: var(--color-ink);
+  font-size: var(--font-size-title);
+  font-weight: 500;
+}
+
+.composerHeader button {
+  width: 38px;
+  height: 38px;
+  border-radius: var(--radius-full);
+  color: var(--color-muted);
+  font-size: 1.3rem;
+}
+
+.modeTabs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  padding: 4px;
+  border: 1px solid var(--color-hairline-soft);
+  border-radius: 14px;
+  background: var(--color-canvas-soft);
+}
+
+.modeTabs button {
+  min-height: 42px;
+  border: 0;
+  border-radius: 10px;
+  color: var(--color-body);
+  background: transparent;
+  font-size: var(--font-size-body-sm);
+  cursor: pointer;
+}
+
+.modeTabs button[aria-pressed="true"] {
+  color: var(--color-primary-active);
+  background: #ffffff;
+  box-shadow: 0 8px 18px rgba(31, 42, 33, 0.06);
+}
+
+.modeTabs button:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+}
+
+.slotForm,
+.editPanel {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) minmax(240px, 0.7fr) auto;
+  align-items: end;
+  gap: 14px;
+}
+
+.slotForm label,
+.editPanel label,
+.taskEditModal label,
+.timePair label {
+  display: grid;
+  gap: 7px;
+  color: var(--color-body);
+  font-size: var(--font-size-body-sm);
+}
+
+.slotForm input,
+.slotForm select,
+.editPanel input,
+.taskEditModal input {
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 13px;
+  border: 1px solid var(--color-hairline);
+  border-radius: 12px;
+  color: var(--color-ink);
+  background: var(--color-surface-card);
+}
+
+.taskEditActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.timePair {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.primaryButton,
+.secondaryButton {
+  min-height: 44px;
+  padding: 0 16px;
+  border-radius: 12px;
+  font-size: var(--font-size-body-sm);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.primaryButton {
+  border: 0;
+  color: var(--color-on-primary);
+  background: var(--color-primary);
+}
+
+.primaryButton:hover,
+.primaryButton:focus-visible {
+  background: var(--color-primary-hover);
+}
+
+.primaryButton:disabled,
+.secondaryButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.58;
+}
+
+.secondaryButton {
+  border: 1px solid var(--color-hairline-strong);
+  color: var(--color-body);
+  background: var(--color-surface-card);
+}
+
+.editPanel {
+  grid-template-columns: minmax(180px, 1fr) minmax(120px, 160px) minmax(120px, 160px) auto auto;
+  padding: 18px;
+}
+
+.tipBand {
+  display: flex;
+  min-height: 66px;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 22px;
+  color: var(--color-muted);
+  background: linear-gradient(120deg, rgba(238, 249, 241, 0.95), rgba(247, 250, 244, 0.88));
+  font-size: var(--font-size-body-sm);
+}
+
+.tipBand svg {
+  flex: 0 0 auto;
+  color: var(--color-primary-active);
+}
+
+.tipBand strong {
+  color: var(--color-primary-active);
+  font-size: var(--font-size-body);
+  font-weight: 500;
+}
+
+.tipBand span {
+  min-width: 0;
+}
+
+.emptyPanel {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  padding: 34px 20px;
+  text-align: center;
+}
+
+.emptyPanel img {
+  width: 76px;
+  height: 76px;
+  object-fit: contain;
+}
+
+.emptyPanel strong {
+  color: var(--color-ink);
+  font-size: var(--font-size-title);
+  font-weight: 500;
+}
+
+.emptyPanel p {
+  max-width: 520px;
+  margin: 0;
+  color: var(--color-muted);
+  font-size: var(--font-size-body-sm);
+}
+
+.emptyPanel a {
+  display: inline-flex;
+  min-height: 42px;
+  align-items: center;
+  margin-top: 6px;
+  padding: 0 16px;
+  border-radius: var(--radius-pill);
+  color: var(--color-on-primary);
+  background: var(--color-primary);
+  font-size: var(--font-size-body-sm);
+  text-decoration: none;
+}
+
+.timelineLoading {
+  display: grid;
+  min-height: 160px;
+  place-items: center;
+  color: var(--color-muted);
+  font-size: var(--font-size-body-sm);
+}
+
+.centerState {
+  display: grid;
+  min-height: 100vh;
+  min-height: 100dvh;
+  place-items: center;
+  align-content: center;
+  gap: 12px;
+  padding: 24px;
+  color: var(--color-body);
+  background: var(--color-canvas-soft);
+  text-align: center;
+}
+
+.centerState img {
+  width: 86px;
+  height: 86px;
+  object-fit: contain;
+}
+
+.centerState h1 {
+  margin: 0;
+  color: var(--color-ink);
+  font-size: var(--font-size-title);
+  font-weight: 500;
+}
+
+.centerState p {
+  margin: 0;
+  color: var(--color-muted);
+}
+
+.success,
+.error {
+  position: fixed;
+  top: 24px;
+  right: 28px;
+  z-index: 4;
+  max-width: min(420px, calc(100vw - 48px));
+  padding: 12px 16px;
+  border-radius: 14px;
+  font-size: var(--font-size-body-sm);
+  box-shadow: 0 16px 36px rgba(31, 42, 33, 0.12);
+  opacity: 1;
+  transform: translateY(0);
+  transition:
+    opacity 220ms ease,
+    transform 220ms ease;
+}
+
+.success {
+  color: var(--color-on-soft-green);
+  background: var(--color-success-soft);
+}
+
+.error {
+  color: var(--color-error);
+  background: var(--color-error-soft);
+}
+
+.toastClosing {
+  opacity: 0;
+  transform: translateY(-6px);
+}
+
+@media (max-width: 1120px) {
+  .plannerLayout {
+    grid-template-columns: minmax(0, 1fr) minmax(240px, 280px);
+  }
+
+  .slotForm,
+  .editPanel {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .slotForm .primaryButton,
+  .editPanel .primaryButton,
+  .editPanel .secondaryButton {
+    grid-column: auto;
+  }
+}
+
+@media (max-width: 920px) {
+  .page {
+    height: auto;
+    min-height: 100vh;
+    min-height: 100dvh;
+    overflow: visible;
+    grid-template-columns: 1fr;
+  }
+
+  .contentShell {
+    overflow: visible;
+    padding: 24px 18px 30px;
+  }
+
+  .pageHeader {
+    align-items: flex-start;
+  }
+
+  .plannerLayout {
+    grid-template-columns: 1fr;
+  }
+
+  .taskDock {
+    grid-column: 1;
+    grid-row: 1;
+    max-height: none;
+    overflow: visible;
+    position: static;
+  }
+
+  .timelineSection {
+    grid-column: 1;
+    grid-row: 2;
+  }
+
+  .sourceList {
+    display: flex;
+    overflow-x: auto;
+    padding-bottom: 4px;
+    scroll-snap-type: x proximity;
+  }
+
+  .sourceCard {
+    flex: 0 0 min(78vw, 260px);
+    scroll-snap-align: start;
+  }
+}
+
+@media (max-width: 700px) {
+  .pageHeader,
+  .editPanel {
+    display: grid;
+  }
+
+  .pageHeader h1 {
+    font-size: 1.72rem;
+  }
+
+  .headerActions {
+    display: grid;
+    justify-self: start;
+  }
+
+  .dateButton,
+  .plannedTimeBadge {
+    justify-self: start;
+  }
+
+  .dateNavigator {
+    min-height: 66px;
+    grid-template-columns: 38px minmax(0, 1fr) 38px;
+    gap: 8px;
+    padding: 0 10px;
+  }
+
+  .dateNavigator time {
+    font-size: var(--font-size-body);
+  }
+
+  .taskDock {
+    padding: 16px;
+  }
+
+  .taskDockHeader {
+    display: grid;
+  }
+
+  .timelineGrid {
+    grid-template-columns: 54px minmax(0, 1fr);
+    gap: 10px;
+  }
+
+  .slotBlock {
+    left: 12px;
+    min-height: 64px;
+    grid-template-columns: 42px minmax(0, 1fr);
+    gap: 10px;
+    padding: 12px 12px 12px 18px;
+    border-radius: 16px;
+  }
+
+  .slotBlockCompact {
+    min-height: 46px;
+    grid-template-columns: 34px minmax(0, 1fr) auto;
+    padding-top: 5px;
+    padding-bottom: 5px;
+  }
+
+  .slotBlock::before {
+    width: 6px;
+  }
+
+  .slotIcon {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+  }
+
+  .slotDuration {
+    display: inline-flex;
+    min-height: 30px;
+    padding: 0 10px;
+    font-size: 0.76rem;
+  }
+
+  .slotActions {
+    justify-content: flex-start;
+    gap: 8px;
+  }
+
+  .slotActions button {
+    width: 38px;
+    height: 38px;
+  }
+
+  .slotActions svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  .slotControls {
+    grid-column: 1 / -1;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: -2px;
+  }
+
+  .slotBlockCompact .slotControls {
+    grid-column: auto;
+    justify-content: flex-end;
+    flex-wrap: nowrap;
+    gap: 6px;
+    margin-top: 0;
+  }
+
+  .slotBlockCompact .slotDuration {
+    display: inline-flex;
+    min-height: 26px;
+    padding: 0 9px;
+    font-size: 0.72rem;
+  }
+
+  .slotBlockCompact .slotActions {
+    gap: 5px;
+  }
+
+  .slotBlockCompact .slotActions button {
+    width: 30px;
+    height: 30px;
+  }
+
+  .slotBlockCompact .slotActions svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  .slotTitleRow strong {
+    white-space: normal;
+  }
+
+  .slotBlockCompact .slotTitleRow strong {
+    white-space: nowrap;
+  }
+
+  .slotMetaRow {
+    flex-wrap: wrap;
+  }
+
+  .slotBlockCompact .slotMetaRow {
+    flex-wrap: nowrap;
+  }
+
+  .timelineHint,
+  .selectedDraftHint {
+    left: 12px;
+  }
+
+  .modeTabs,
+  .slotForm,
+  .editPanel,
+  .timePair {
+    grid-template-columns: 1fr;
+  }
+
+  .tipBand {
+    align-items: flex-start;
+  }
+
+  .modalBackdrop {
+    padding: 14px;
+  }
+
+  .composerModal,
+  .taskEditModal {
+    max-height: calc(100dvh - 28px);
+    padding: 18px;
+  }
+
+  .success,
+  .error {
+    top: 14px;
+    right: 14px;
+  }
+}
