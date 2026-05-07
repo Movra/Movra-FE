@@ -1,0 +1,54 @@
+.page {
+  display: grid;
+  min-height: 100vh;
+  place-items: center;
+  padding: 24px;
+  color: var(--color-ink);
+  background: var(--color-canvas-soft);
+}
+
+.panel {
+  display: grid;
+  width: min(100%, 420px);
+  justify-items: center;
+  gap: 12px;
+  padding: 32px;
+  border: 1px solid var(--color-hairline-soft);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.86);
+  text-align: center;
+}
+
+.mark {
+  width: 48px;
+  height: 48px;
+  color: var(--color-primary);
+}
+
+.panel p,
+.panel h1 {
+  margin: 0;
+}
+
+.panel p {
+  color: var(--color-muted);
+  font-size: var(--font-size-body-sm);
+}
+
+.panel h1 {
+  color: var(--color-ink);
+  font-size: var(--font-size-title);
+  font-weight: 500;
+}
+
+.panel a {
+  display: inline-flex;
+  min-height: 40px;
+  align-items: center;
+  padding: 0 16px;
+  border-radius: var(--radius-pill);
+  color: var(--color-on-primary);
+  background: var(--color-primary);
+  font-size: var(--font-size-body-sm);
+  text-decoration: none;
+}

@@ -1,0 +1,111 @@
+.appShell {
+  min-height: 100vh;
+  color: var(--color-ink);
+  background: var(--color-canvas);
+}
+
+.skipLink {
+  position: fixed;
+  top: var(--space-sm);
+  left: var(--space-sm);
+  z-index: 10;
+  padding: var(--space-xs) var(--space-sm);
+  border: 1px solid var(--color-primary);
+  border-radius: var(--radius-md);
+  color: var(--color-on-soft-green);
+  background: var(--color-primary-soft);
+  transform: translateY(-160%);
+}
+
+.skipLink:focus {
+  transform: translateY(0);
+}
+
+.header {
+  border-bottom: 1px solid var(--color-hairline-soft);
+}
+
+.nav {
+  display: flex;
+  min-height: 64px;
+  max-width: var(--layout-max-width);
+  align-items: center;
+  justify-content: space-between;
+  margin: 0 auto;
+  padding: 0 var(--space-lg);
+}
+
+.wordmark {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  color: var(--color-ink);
+  font-size: 1.125rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.wordmarkIcon {
+  width: 32px;
+  height: 32px;
+}
+
+.navLinks {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.navLink {
+  min-height: 40px;
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  color: var(--color-body);
+  font-size: var(--font-size-nav);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.navButton {
+  min-height: 40px;
+  padding: 10px 14px;
+  border: 1px solid var(--color-hairline-strong);
+  border-radius: var(--radius-md);
+  color: var(--color-ink);
+  background: var(--color-surface-card);
+  font-size: var(--font-size-nav);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.navLink:hover,
+.navLink:focus-visible,
+.navButton:hover,
+.navButton:focus-visible {
+  color: var(--color-primary-active);
+  background: var(--color-primary-pale);
+}
+
+.main {
+  max-width: var(--layout-max-width);
+  margin: 0 auto;
+  padding: var(--space-section) var(--space-lg);
+}
+
+.dashboardMain {
+  min-height: 100vh;
+}
+
+.authMain {
+  min-height: 100vh;
+}
+
+@media (max-width: 640px) {
+  .nav {
+    padding: 0 var(--space-base);
+  }
+
+  .main {
+    padding: var(--space-xxl) var(--space-base);
+  }
+}
