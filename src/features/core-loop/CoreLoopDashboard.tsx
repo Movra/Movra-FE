@@ -52,6 +52,7 @@ function HeaderIcon({ type }: { type: "bell" | "calendar" }) {
 type DashboardIconType =
   | "check"
   | "chevron"
+  | "exam"
   | "friends"
   | "plus"
   | "square"
@@ -59,6 +60,7 @@ type DashboardIconType =
   | "summary"
   | "table"
   | "target"
+  | "vision"
   | "win";
 
 function DashboardIcon({ type }: { type: DashboardIconType }) {
@@ -80,6 +82,13 @@ function DashboardIcon({ type }: { type: DashboardIconType }) {
           <path d="M3 20a6 6 0 0 1 12 0" />
           <path d="M16 11a3 3 0 0 0 0-6" />
           <path d="M17 20a5 5 0 0 0-3-4.5" />
+        </>
+      ) : null}
+      {type === "exam" ? (
+        <>
+          <rect x="5" y="4" width="14" height="16" rx="2" />
+          <path d="M9 8h6M9 12h6M9 16h3" />
+          <path d="m15 16 1 1 2-3" />
         </>
       ) : null}
       {type === "plus" ? <path d="M12 5v14M5 12h14" /> : null}
@@ -104,6 +113,14 @@ function DashboardIcon({ type }: { type: DashboardIconType }) {
           <circle cx="12" cy="12" r="8" />
           <circle cx="12" cy="12" r="3" />
           <path d="M12 2v3M12 19v3M2 12h3M19 12h3" />
+        </>
+      ) : null}
+      {type === "vision" ? (
+        <>
+          <path d="M12 19V8" />
+          <path d="M8 12c-2.5 0-4-1.8-4-4 2.6-.2 4.3.8 5 3" />
+          <path d="M16 12c2.5 0 4-1.8 4-4-2.6-.2-4.3.8-5 3" />
+          <path d="M7 20h10" />
         </>
       ) : null}
       {type === "win" ? (
@@ -414,6 +431,8 @@ export function CoreLoopDashboard() {
 
   const tasks = home.todayDailyPlan?.tasks ?? [];
   const primaryTopPick = home.topPicks[0] ?? null;
+  const futureVision = home.futureVision;
+  const nextExamSchedule = home.nextExamSchedule;
   const timetableSlots = getSortedTimetableSlots(
     home.timetable?.slots ?? [],
   ).slice(0, 5);
@@ -433,9 +452,9 @@ export function CoreLoopDashboard() {
   );
   const focusTotalSeconds = home.focusSessions.totalFocusSeconds;
   const tinyWinCount = completedTaskCount + completedTopPicks;
-  const nextExamLabel = home.nextExamSchedule
-    ? `${home.nextExamSchedule.title} ${formatExamDistance(
-        home.nextExamSchedule.daysUntil,
+  const nextExamLabel = nextExamSchedule
+    ? `${nextExamSchedule.title} ${formatExamDistance(
+        nextExamSchedule.daysUntil,
       )}`
     : "목표 설정 전";
   const dateParts = getDisplayDateParts(home.targetDate);
@@ -551,6 +570,63 @@ export function CoreLoopDashboard() {
                 </NavLink>
               )}
             </div>
+          </section>
+
+          <section className={styles.visionPanel} aria-labelledby="vision-title">
+            <div className={styles.panelTitleRow}>
+              <div>
+                <span className={styles.sectionIcon} aria-hidden="true">
+                  <DashboardIcon type="vision" />
+                </span>
+                <h2 id="vision-title">Future Vision</h2>
+              </div>
+              <NavLink to="/future-vision">
+                {futureVision ? "수정하기" : "그리기"}
+              </NavLink>
+            </div>
+            {futureVision ? (
+              <div className={styles.visionPreview}>
+                <img
+                  alt=""
+                  aria-hidden="true"
+                  src={futureVision.weeklyVisionImageUrl}
+                />
+                <div>
+                  <strong>{futureVision.yearlyVisionDescription}</strong>
+                  <span>오늘의 목표가 흐려질 때 다시 볼 이미지</span>
+                </div>
+              </div>
+            ) : (
+              <NavLink className={styles.emptyVisionLink} to="/future-vision">
+                <strong>자주 보고 싶은 목표 이미지를 걸어둘래요?</strong>
+                <span>연간 목표와 주간 목표를 직접 그려 홈에 연결해요.</span>
+              </NavLink>
+            )}
+          </section>
+
+          <section className={styles.examPanel} aria-labelledby="exam-title">
+            <div className={styles.panelTitleRow}>
+              <div>
+                <span className={styles.sectionIcon} aria-hidden="true">
+                  <DashboardIcon type="exam" />
+                </span>
+                <h2 id="exam-title">다음 시험</h2>
+              </div>
+              <NavLink to="/exam-schedules">전체 보기</NavLink>
+            </div>
+            {nextExamSchedule ? (
+              <NavLink className={styles.nextExamCard} to="/exam-schedules">
+                <span>{formatExamDistance(nextExamSchedule.daysUntil)}</span>
+                <strong>{nextExamSchedule.title}</strong>
+                <small>
+                  {nextExamSchedule.subject} · {nextExamSchedule.examDate}
+                </small>
+              </NavLink>
+            ) : (
+              <NavLink className={styles.emptyExamLink} to="/exam-schedules">
+                시험 일정을 추가하고 D-Day를 확인해요.
+              </NavLink>
+            )}
           </section>
 
           <section className={styles.focusBanner} aria-labelledby="focus-title">

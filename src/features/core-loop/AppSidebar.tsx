@@ -12,6 +12,7 @@ type SidebarItem = {
 };
 
 type SidebarIconType =
+  | "exam"
   | "focus"
   | "friends"
   | "home"
@@ -19,7 +20,8 @@ type SidebarIconType =
   | "reflection"
   | "settings"
   | "statistics"
-  | "timetable";
+  | "timetable"
+  | "vision";
 
 type AppSidebarProps = {
   friendText: string;
@@ -32,7 +34,9 @@ type AppSidebarProps = {
 const sidebarItems: SidebarItem[] = [
   { icon: "home", label: "홈", meta: "Today", path: "/" },
   { icon: "plan", label: "계획", path: "/planning" },
+  { icon: "vision", label: "비전", path: "/future-vision" },
   { icon: "timetable", label: "시간표", path: "/timetable" },
+  { icon: "exam", label: "시험 일정", path: "/exam-schedules" },
   { icon: "focus", label: "집중", path: "/focus" },
   { icon: "reflection", label: "회고", path: "/reflection" },
   { icon: "statistics", label: "통계", path: "/statistics" },
@@ -68,6 +72,21 @@ function SidebarIcon({ type }: { type: SidebarIconType }) {
         <>
           <rect x="4" y="5" width="16" height="15" rx="2" />
           <path d="M8 3v4M16 3v4M4 10h16" />
+        </>
+      ) : null}
+      {type === "vision" ? (
+        <>
+          <path d="M12 19V8" />
+          <path d="M8 12c-2.5 0-4-1.8-4-4 2.6-.2 4.3.8 5 3" />
+          <path d="M16 12c2.5 0 4-1.8 4-4-2.6-.2-4.3.8-5 3" />
+          <path d="M7 20h10" />
+        </>
+      ) : null}
+      {type === "exam" ? (
+        <>
+          <rect x="5" y="4" width="14" height="16" rx="2" />
+          <path d="M9 8h6M9 12h6M9 16h3" />
+          <path d="m15 16 1 1 2-3" />
         </>
       ) : null}
       {type === "focus" ? (

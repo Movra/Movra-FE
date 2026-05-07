@@ -83,6 +83,13 @@ describe("CoreLoopDashboard", () => {
           targetDate: "2026-04-24",
           totalFocusSeconds: 5400,
         },
+        futureVision: {
+          futureVisionId: "future-vision-id",
+          weeklyVisionImageUrl: "https://example.com/weekly.png",
+          yearlyVisionCreatedAt: "2026-04-24",
+          yearlyVisionDescription: "원하는 대학에 합격하는 한 해",
+          yearlyVisionImageUrl: "https://example.com/yearly.png",
+        },
         nextExamSchedule: {
           daysUntil: 41,
           examDate: "2026-06-04",
@@ -158,6 +165,15 @@ describe("CoreLoopDashboard", () => {
     expect(screen.getByText("1h 30m")).toBeInTheDocument();
     expect(screen.getByText("04.24")).toBeInTheDocument();
     expect(screen.getByText("금요일")).toBeInTheDocument();
+    expect(screen.getByText("원하는 대학에 합격하는 한 해")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "수정하기" })).toHaveAttribute(
+      "href",
+      "/future-vision",
+    );
+    expect(screen.getByRole("link", { name: /D-41/ })).toHaveAttribute(
+      "href",
+      "/exam-schedules",
+    );
     expect(screen.getByText("연결된 친구 없음")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "통계" })).toHaveAttribute(
       "href",

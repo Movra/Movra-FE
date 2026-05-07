@@ -1,7 +1,9 @@
 import { NavLink, Route, Routes, useLocation } from "react-router-dom";
 
 import { RequireAuth } from "../features/auth/RequireAuth";
+import { ExamSchedulesPage } from "../pages/ExamSchedulesPage";
 import { FeaturePlaceholderPage } from "../pages/FeaturePlaceholderPage";
+import { FutureVisionPage } from "../pages/FutureVisionPage";
 import { HomePage } from "../pages/HomePage";
 import { LoginPage } from "../pages/LoginPage";
 import { OAuthProfileSetupPage } from "../pages/OAuthProfileSetupPage";
@@ -32,6 +34,8 @@ export function AppRoutes() {
   const isHomeRoute = location.pathname === "/";
   const isPlanningRoute = location.pathname === "/planning";
   const isTimetableRoute = location.pathname === "/timetable";
+  const isFutureVisionRoute = location.pathname === "/future-vision";
+  const isExamSchedulesRoute = location.pathname === "/exam-schedules";
   const isPlaceholderRoute = placeholderRoutes.some(
     (route) => route.path === location.pathname,
   );
@@ -45,6 +49,8 @@ export function AppRoutes() {
       isHomeRoute ||
       isPlanningRoute ||
       isTimetableRoute ||
+      isFutureVisionRoute ||
+      isExamSchedulesRoute ||
       isPlaceholderRoute ? null : (
         <header className={styles.header}>
           <nav className={styles.nav} aria-label="주요 메뉴">
@@ -76,7 +82,11 @@ export function AppRoutes() {
             ? styles.authMain
             : isHomeRoute
               ? styles.dashboardMain
-              : isPlanningRoute || isTimetableRoute || isPlaceholderRoute
+              : isPlanningRoute ||
+                  isTimetableRoute ||
+                  isFutureVisionRoute ||
+                  isExamSchedulesRoute ||
+                  isPlaceholderRoute
                 ? styles.dashboardMain
                 : styles.main
         }
@@ -117,6 +127,22 @@ export function AppRoutes() {
             element={
               <RequireAuth>
                 <TimetablePage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/future-vision"
+            element={
+              <RequireAuth>
+                <FutureVisionPage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/exam-schedules"
+            element={
+              <RequireAuth>
+                <ExamSchedulesPage />
               </RequireAuth>
             }
           />
