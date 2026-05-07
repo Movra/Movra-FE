@@ -1,0 +1,81 @@
+@font-face {
+  font-family: "BMJUA";
+  src: url("../assets/fonts/BMJUA_ttf.ttf") format("truetype");
+  font-display: swap;
+}
+
+:root {
+  --color-primary: #2f9e5b;
+  --color-primary-active: #247a47;
+  --color-primary-hover: #288d51;
+  --color-primary-soft: #dff3e6;
+  --color-primary-pale: #eef9f1;
+  --color-character-leaf: #54c879;
+  --color-character-leaf-dark: #2f9e5b;
+  --color-character-body: #fff4d8;
+  --color-character-body-shade: #f6dfad;
+  --color-character-ink: #275033;
+  --color-character-blush: #f4a6a6;
+  --color-canvas: #f4f8f1;
+  --color-canvas-soft: #f8fbf5;
+  --color-surface-card: #ffffff;
+  --color-surface-tinted: #eef9f1;
+  --color-surface-strong: #dbe9d8;
+  --color-hairline: #dce7d8;
+  --color-hairline-soft: #e9f0e5;
+  --color-hairline-strong: #b9cdb3;
+  --color-ink: #1f2a21;
+  --color-body: #4d5a4e;
+  --color-muted: #738071;
+  --color-muted-soft: #9aa696;
+  --color-on-primary: #ffffff;
+  --color-on-soft-green: #1f4a30;
+  --color-success: #258a57;
+  --color-success-soft: #e4f4eb;
+  --color-warning: #b47a1c;
+  --color-error: #cf3d4f;
+  --color-error-soft: #fdecef;
+  --color-info: #3f7f9f;
+  --color-oauth-google: #4285f4;
+  --color-oauth-naver: #03c75a;
+  --space-xxs: 4px;
+  --space-xs: 8px;
+  --space-sm: 12px;
+  --space-base: 16px;
+  --space-md: 20px;
+  --space-lg: 24px;
+  --space-xl: 32px;
+  --space-xxl: 48px;
+  --space-section: 80px;
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --radius-organic: 32px 20px 28px 22px;
+  --radius-pill: 9999px;
+  --radius-full: 9999px;
+  --font-family-sans: "BMJUA", Pretendard, Inter, system-ui, "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-family-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Consolas, monospace;
+  --font-size-display-lg: 2.5rem;
+  --font-size-title: 1.125rem;
+  --font-size-body: 1rem;
+  --font-size-body-sm: 0.875rem;
+  --font-size-caption: 0.8125rem;
+  --font-size-nav: 0.875rem;
+  --layout-max-width: 1200px;
+}
+
+@media (max-width: 1024px) {
+  :root {
+    --space-section: 56px;
+    --font-size-display-lg: 2rem;
+  }
+}
+
+@media (max-width: 640px) {
+  :root {
+    --space-section: 40px;
+    --font-size-display-lg: 1.75rem;
+  }
+}
