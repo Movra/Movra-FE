@@ -1,0 +1,1175 @@
+.page {
+  display: grid;
+  height: 100vh;
+  height: 100dvh;
+  min-height: 100vh;
+  min-height: 100dvh;
+  overflow: hidden;
+  grid-template-columns: 232px minmax(0, 1fr);
+  color: var(--color-ink);
+  background: linear-gradient(135deg, #ffffff 0%, #f8fbf5 54%, #f1f7ee 100%);
+}
+
+.contentShell {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding: 28px 42px 30px;
+}
+
+.mindStage {
+  display: grid;
+  height: calc(100vh - 58px);
+  height: calc(100dvh - 58px);
+  min-height: 0;
+  grid-template-rows: auto auto minmax(0, 1fr) auto auto;
+  gap: 22px;
+}
+
+.mindHeader {
+  display: flex;
+  min-width: 0;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.kicker {
+  margin: 0 0 4px;
+  color: var(--color-primary-active);
+  font-size: var(--font-size-caption);
+  letter-spacing: 0.02em;
+}
+
+.mindHeader h1,
+.topPickHero h1 {
+  margin: 0;
+  color: var(--color-ink);
+  font-weight: 500;
+  letter-spacing: 0;
+  line-height: 1.14;
+}
+
+.mindHeader h1 {
+  font-size: 1.9rem;
+}
+
+.titleUnderline,
+.previewUnderline {
+  display: block;
+  width: 74px;
+  height: 7px;
+  margin-top: 5px;
+  border-radius: var(--radius-pill);
+  background: repeating-linear-gradient(
+    90deg,
+    rgba(84, 200, 121, 0.86) 0 10px,
+    rgba(84, 200, 121, 0.28) 10px 15px
+  );
+}
+
+.dateControls {
+  display: inline-flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.todayPill,
+.dateControls time,
+.dateControls a {
+  display: inline-flex;
+  min-height: 42px;
+  align-items: center;
+  gap: 8px;
+  padding: 0 16px;
+  border: 1px solid var(--color-hairline-soft);
+  border-radius: var(--radius-pill);
+  color: var(--color-body);
+  background: rgba(255, 255, 255, 0.84);
+  font-size: var(--font-size-body-sm);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.todayPill svg,
+.dateControls a svg {
+  width: 19px;
+  height: 19px;
+}
+
+.dateControls a {
+  width: 42px;
+  justify-content: center;
+  padding: 0;
+}
+
+.mindIntro {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 330px);
+  gap: 28px;
+  align-items: center;
+}
+
+.mindIntro h2 {
+  margin: 0;
+  color: var(--color-ink);
+  font-size: 1.28rem;
+  font-weight: 400;
+  line-height: 1.9;
+}
+
+.mindIntro strong {
+  position: relative;
+  color: var(--color-primary-active);
+  font-weight: 500;
+}
+
+.mindIntro strong::after {
+  position: absolute;
+  right: 0;
+  bottom: -6px;
+  left: 0;
+  height: 5px;
+  border-radius: var(--radius-pill);
+  background: repeating-linear-gradient(
+    90deg,
+    rgba(84, 200, 121, 0.62) 0 9px,
+    rgba(84, 200, 121, 0.24) 9px 14px
+  );
+  content: "";
+}
+
+.helperNote {
+  display: grid;
+  gap: 8px;
+  justify-self: end;
+  padding: 16px 22px;
+  border-radius: 14px;
+  color: var(--color-body);
+  background: linear-gradient(135deg, rgba(238, 249, 241, 0.92), rgba(244, 248, 241, 0.86));
+  font-size: var(--font-size-caption);
+  line-height: 1.5;
+  text-align: center;
+}
+
+.helperNote strong {
+  color: var(--color-body);
+  font-weight: 500;
+}
+
+.mindBoard {
+  display: grid;
+  min-height: 0;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 12px;
+}
+
+.mindBoardHeader,
+.morningHeader,
+.columnHeader,
+.pickDetailHeader {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.mindBoardHeader h2,
+.morningHeader h2 {
+  margin: 0;
+  color: var(--color-ink);
+  font-size: var(--font-size-body);
+  font-weight: 500;
+}
+
+.mindBoardHeader > span,
+.morningHeader > span,
+.columnHeader span,
+.pickDetailHeader strong {
+  display: inline-flex;
+  min-height: 30px;
+  align-items: center;
+  padding: 0 12px;
+  border: 1px solid var(--color-hairline-soft);
+  border-radius: var(--radius-pill);
+  color: var(--color-primary-active);
+  background: var(--color-primary-pale);
+  font-size: var(--font-size-caption);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.taskList,
+.morningList {
+  display: grid;
+  min-height: 0;
+  align-content: start;
+  gap: 12px;
+  padding: 0 4px 4px;
+  margin: 0;
+  overflow: auto;
+  list-style: none;
+}
+
+.taskRow,
+.completedTaskRow {
+  display: grid;
+  min-width: 0;
+  min-height: 58px;
+  grid-template-columns: 42px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border: 1px solid rgba(220, 231, 216, 0.78);
+  border-radius: 13px;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 10px 24px rgba(31, 42, 33, 0.06);
+}
+
+.completedTaskRow {
+  color: var(--color-muted);
+  background: rgba(248, 251, 245, 0.7);
+}
+
+.checkButton {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border: 0;
+  border-radius: 10px;
+  color: var(--color-primary-active);
+  background: transparent;
+  cursor: pointer;
+}
+
+.checkedIcon,
+.emptyCheckIcon {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  border: 2px solid rgba(134, 146, 135, 0.48);
+  border-radius: 8px;
+}
+
+.checkedIcon {
+  color: var(--color-on-primary);
+  border-color: var(--color-primary);
+  background: var(--color-primary);
+}
+
+.checkedIcon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.taskContent {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+.taskContent > span {
+  overflow: hidden;
+  color: var(--color-ink);
+  font-size: var(--font-size-body);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.completedTaskRow .taskContent > span {
+  color: var(--color-muted);
+  text-decoration: line-through;
+}
+
+.taskMeta {
+  display: flex;
+  min-height: 18px;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.taskMeta strong,
+.taskMeta em {
+  display: inline-flex;
+  min-height: 18px;
+  align-items: center;
+  padding: 0 8px;
+  border-radius: var(--radius-pill);
+  font-size: 0.72rem;
+  font-style: normal;
+  font-weight: 500;
+}
+
+.taskMeta strong {
+  color: var(--color-primary-active);
+  background: var(--color-primary-pale);
+}
+
+.taskMeta em {
+  color: var(--color-muted);
+  background: var(--color-hairline-soft);
+}
+
+.rowActions {
+  display: inline-flex;
+  gap: 6px;
+}
+
+.iconButton {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border: 0;
+  border-radius: 10px;
+  color: var(--color-muted);
+  background: transparent;
+  cursor: pointer;
+}
+
+.iconButton svg {
+  width: 19px;
+  height: 19px;
+}
+
+.iconButton:hover,
+.iconButton:focus-visible {
+  color: var(--color-primary-active);
+  background: var(--color-primary-pale);
+}
+
+.iconButton:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.inlineEditForm {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.inlineEditForm input,
+.addTaskDock input,
+.morningForm input,
+.memoField textarea {
+  width: 100%;
+  border: 1px solid var(--color-hairline-soft);
+  color: var(--color-ink);
+  background: #ffffff;
+}
+
+.inlineEditForm input {
+  min-height: 38px;
+  padding: 8px 10px;
+  border-radius: 10px;
+}
+
+.saveTextButton,
+.cancelTextButton {
+  min-height: 34px;
+  padding: 0 12px;
+  border: 1px solid var(--color-hairline-soft);
+  border-radius: 10px;
+  color: var(--color-body);
+  background: rgba(255, 255, 255, 0.84);
+  font-size: var(--font-size-caption);
+  cursor: pointer;
+}
+
+.saveTextButton {
+  color: var(--color-on-primary);
+  border-color: var(--color-primary);
+  background: var(--color-primary);
+}
+
+.addTaskDock {
+  position: sticky;
+  bottom: 0;
+  z-index: 4;
+  display: grid;
+  grid-template-columns: 46px minmax(0, 1fr) 46px;
+  gap: 12px;
+  align-items: center;
+  padding: 12px;
+  border: 1px solid var(--color-primary);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 18px 38px rgba(31, 42, 33, 0.1);
+}
+
+.addTaskDock > span,
+.addTaskDock button {
+  display: grid;
+  width: 40px;
+  height: 40px;
+  place-items: center;
+  border-radius: 12px;
+}
+
+.addTaskDock > span {
+  color: var(--color-primary-active);
+  background: var(--color-primary-pale);
+}
+
+.addTaskDock svg {
+  width: 22px;
+  height: 22px;
+}
+
+.addTaskDock input {
+  min-height: 44px;
+  padding: 0 8px;
+  border: 0;
+  font-size: var(--font-size-body);
+}
+
+.addTaskDock button {
+  border: 0;
+  color: var(--color-on-primary);
+  background: var(--color-primary);
+  cursor: pointer;
+}
+
+.addTaskDock button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.flowFooter {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.flowFooter p {
+  margin: 0;
+  color: var(--color-body);
+  font-size: var(--font-size-body-sm);
+}
+
+.flowFooter button {
+  min-height: 46px;
+  padding: 0 22px;
+  border: 0;
+  border-radius: 14px;
+  color: var(--color-on-primary);
+  background: var(--color-primary);
+  font-size: var(--font-size-body-sm);
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.flowFooter button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.topPickStage {
+  display: grid;
+  align-content: start;
+  min-height: 0;
+}
+
+.topPickCard {
+  position: relative;
+  display: grid;
+  min-height: 0;
+  grid-template-rows: auto auto;
+  gap: 16px;
+  overflow: visible;
+  padding: 18px 30px;
+  border: 1px solid rgba(220, 231, 216, 0.88);
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 16px 38px rgba(31, 42, 33, 0.08);
+}
+
+.topPickHero {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 18px 110px 8px;
+  text-align: center;
+}
+
+.topPickHero h1 {
+  max-width: 780px;
+  font-size: 1.9rem;
+}
+
+.topPickHero h1 strong {
+  color: var(--color-primary-active);
+  font-weight: 600;
+}
+
+.topPickHero > p:last-child {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: var(--font-size-body-sm);
+}
+
+.backButton,
+.helpButton {
+  position: absolute;
+  top: 18px;
+  min-height: 42px;
+  border: 1px solid var(--color-hairline-soft);
+  border-radius: var(--radius-pill);
+  color: var(--color-body);
+  background: rgba(255, 255, 255, 0.88);
+  cursor: pointer;
+}
+
+.backButton {
+  left: 22px;
+  display: grid;
+  width: 42px;
+  place-items: center;
+}
+
+.backButton svg {
+  width: 20px;
+  height: 20px;
+}
+
+.helpButton {
+  right: 22px;
+  padding: 0 16px;
+  font-size: var(--font-size-body-sm);
+}
+
+.backButton:hover,
+.backButton:focus-visible,
+.helpButton:hover,
+.helpButton:focus-visible {
+  color: var(--color-primary-active);
+  background: var(--color-primary-pale);
+}
+
+.topPickForm {
+  display: grid;
+  min-height: 0;
+  grid-template-rows: auto auto auto;
+  gap: 12px;
+}
+
+.topPickColumns {
+  display: grid;
+  min-height: 0;
+  grid-template-columns: minmax(340px, 0.92fr) minmax(420px, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+
+.pickListColumn {
+  display: grid;
+  min-height: 0;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: 12px;
+}
+
+.columnHeader strong,
+.pickDetailHeader span {
+  color: var(--color-ink);
+  font-size: var(--font-size-body-sm);
+  font-weight: 500;
+}
+
+.pickList {
+  display: grid;
+  min-height: 0;
+  max-height: min(430px, 48vh);
+  align-content: start;
+  gap: 10px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+}
+
+.pickItem {
+  display: grid;
+  min-width: 0;
+  min-height: 68px;
+  grid-template-columns: 34px minmax(0, 1fr) 24px;
+  grid-template-rows: auto auto;
+  gap: 4px 12px;
+  align-items: center;
+  padding: 12px 14px;
+  border: 1px solid rgba(220, 231, 216, 0.78);
+  border-radius: 16px;
+  color: var(--color-body);
+  background: rgba(255, 255, 255, 0.76);
+  text-align: left;
+  cursor: pointer;
+}
+
+.pickItem:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.selectedPickItem {
+  border-color: var(--color-primary);
+  color: var(--color-primary-active);
+  background: linear-gradient(135deg, rgba(238, 249, 241, 0.95), rgba(255, 255, 255, 0.96));
+  box-shadow: 0 12px 24px rgba(47, 158, 91, 0.08);
+}
+
+.topPickedItem {
+  border-color: var(--color-primary);
+}
+
+.pickCheck {
+  grid-column: 1;
+  grid-row: span 2;
+  display: grid;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  border: 1px solid var(--color-hairline-soft);
+  border-radius: var(--radius-full);
+  color: var(--color-on-primary);
+  background: #ffffff;
+}
+
+.selectedPickItem .pickCheck {
+  border-color: var(--color-primary);
+  background: var(--color-primary);
+}
+
+.pickCheck svg {
+  width: 17px;
+  height: 17px;
+}
+
+.pickItem strong {
+  grid-column: 2;
+  grid-row: 1;
+  overflow: hidden;
+  color: var(--color-ink);
+  font-size: var(--font-size-body);
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pickItem small {
+  grid-column: 2;
+  grid-row: 2;
+  color: var(--color-muted);
+  font-size: var(--font-size-caption);
+  white-space: nowrap;
+}
+
+.bookmarkIcon {
+  grid-column: 3;
+  grid-row: span 2;
+  color: var(--color-muted-soft);
+}
+
+.topPickedItem .bookmarkIcon,
+.selectedPickItem .bookmarkIcon {
+  color: var(--color-primary-active);
+}
+
+.bookmarkIcon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.listNote,
+.limitNote,
+.secureNote,
+.emptyText {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: var(--font-size-caption);
+  line-height: 1.45;
+}
+
+.limitNote {
+  color: var(--color-warning);
+  text-align: center;
+}
+
+.secureNote {
+  text-align: center;
+}
+
+.pickDetail {
+  display: grid;
+  min-height: 0;
+  align-content: start;
+  gap: 14px;
+  padding: 20px;
+  border: 1px solid rgba(220, 231, 216, 0.88);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.78);
+}
+
+.selectedTaskPreview {
+  display: grid;
+  grid-template-columns: 76px minmax(0, 1fr);
+  gap: 16px;
+  align-items: center;
+  min-width: 0;
+  padding: 4px 0;
+}
+
+.starBadge {
+  display: grid;
+  width: 64px;
+  height: 64px;
+  place-items: center;
+  border-radius: var(--radius-full);
+  color: var(--color-primary-active);
+  background: var(--color-primary-pale);
+}
+
+.starBadge svg {
+  width: 34px;
+  height: 34px;
+}
+
+.selectedTaskPreview h2 {
+  display: -webkit-box;
+  margin: 0;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  color: var(--color-ink);
+  font-size: 1.26rem;
+  font-weight: 600;
+  line-height: 1.28;
+  -webkit-line-clamp: 2;
+}
+
+.selectedTaskPreview p {
+  margin: 6px 0 0;
+  color: var(--color-muted);
+  font-size: var(--font-size-caption);
+}
+
+.estimateGroup {
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  margin: 0;
+}
+
+.estimateGroup legend,
+.memoField {
+  color: var(--color-primary-active);
+  font-size: var(--font-size-body-sm);
+  font-weight: 500;
+}
+
+.estimateGroup > div {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.minuteOption,
+.selectedMinute {
+  display: grid;
+  min-height: 42px;
+  place-items: center;
+  border: 1px solid var(--color-hairline-soft);
+  border-radius: 12px;
+  color: var(--color-body);
+  background: #ffffff;
+  font-size: var(--font-size-body-sm);
+  cursor: pointer;
+}
+
+.minuteOption input,
+.selectedMinute input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.selectedMinute {
+  color: var(--color-on-primary);
+  border-color: var(--color-primary);
+  background: var(--color-primary);
+}
+
+.estimateGroup:disabled .minuteOption,
+.estimateGroup:disabled .selectedMinute {
+  opacity: 0.62;
+  cursor: not-allowed;
+}
+
+.memoField {
+  position: relative;
+  display: grid;
+  gap: 8px;
+}
+
+.memoField span,
+.memoField small {
+  color: var(--color-muted);
+  font-weight: 400;
+}
+
+.memoField textarea {
+  min-height: 88px;
+  resize: none;
+  padding: 13px;
+  border-radius: 14px;
+  font-size: var(--font-size-body-sm);
+  line-height: 1.5;
+}
+
+.memoField small {
+  position: absolute;
+  right: 12px;
+  bottom: 10px;
+  font-size: var(--font-size-caption);
+}
+
+.tipBox {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 2px 10px;
+  padding: 12px;
+  border-radius: 16px;
+  color: var(--color-body);
+  background: linear-gradient(135deg, rgba(238, 249, 241, 0.95), rgba(255, 250, 241, 0.88));
+}
+
+.tipBox strong {
+  grid-row: span 2;
+  color: var(--color-primary-active);
+  font-size: var(--font-size-body-sm);
+  font-weight: 500;
+}
+
+.tipBox p,
+.tipBox span {
+  margin: 0;
+  font-size: var(--font-size-caption);
+  line-height: 1.45;
+}
+
+.tipBox span {
+  color: var(--color-muted);
+}
+
+.ctaButton,
+.secondaryCtaButton {
+  min-height: 52px;
+  border: 0;
+  border-radius: 14px;
+  color: var(--color-on-primary);
+  background: var(--color-primary);
+  box-shadow: 0 16px 28px rgba(47, 158, 91, 0.22);
+  font-size: var(--font-size-body);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.secondaryCtaButton {
+  color: var(--color-primary-active);
+  border: 1px solid var(--color-primary);
+  background: #ffffff;
+  box-shadow: none;
+}
+
+.ctaButton:disabled,
+.secondaryCtaButton:disabled {
+  opacity: 0.52;
+  cursor: not-allowed;
+}
+
+.morningPanel {
+  display: grid;
+  gap: 14px;
+  padding: 18px 22px;
+  border: 1px solid rgba(220, 231, 216, 0.88);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.86);
+  box-shadow: 0 12px 28px rgba(31, 42, 33, 0.05);
+}
+
+.morningForm {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+}
+
+.morningForm input {
+  min-height: 42px;
+  padding: 0 14px;
+  border-radius: 12px;
+}
+
+.morningForm button {
+  min-height: 42px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 12px;
+  color: var(--color-on-primary);
+  background: var(--color-primary);
+  font-size: var(--font-size-body-sm);
+  cursor: pointer;
+}
+
+.morningForm button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.morningList {
+  max-height: 220px;
+}
+
+.emptyState {
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 8px;
+  min-height: 260px;
+  color: var(--color-body);
+  text-align: center;
+}
+
+.emptyState img {
+  width: 86px;
+  height: 86px;
+  object-fit: contain;
+}
+
+.emptyState strong {
+  color: var(--color-ink);
+  font-size: var(--font-size-body);
+  font-weight: 500;
+}
+
+.emptyState p {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: var(--font-size-body-sm);
+}
+
+.error,
+.success {
+  position: absolute;
+  right: 42px;
+  bottom: 22px;
+  z-index: 5;
+  width: min(360px, calc(100% - 84px));
+  margin: 0;
+  padding: 10px 14px;
+  border-radius: 12px;
+  font-size: var(--font-size-body-sm);
+  line-height: 1.45;
+  box-shadow: 0 12px 28px rgba(31, 42, 33, 0.12);
+  opacity: 1;
+  transform: translateY(0);
+  transition:
+    opacity 220ms ease,
+    transform 220ms ease;
+}
+
+.toastLeaving {
+  opacity: 0;
+  transform: translateY(8px);
+}
+
+.error {
+  color: var(--color-error);
+  background: var(--color-error-soft);
+}
+
+.success {
+  color: var(--color-success);
+  background: var(--color-success-soft);
+}
+
+.centerState {
+  display: grid;
+  min-height: 100vh;
+  place-items: center;
+  align-content: center;
+  gap: 14px;
+  padding: 32px;
+  color: var(--color-body);
+  background: var(--color-canvas-soft);
+  text-align: center;
+}
+
+.centerState img {
+  width: 96px;
+  height: 96px;
+  object-fit: contain;
+}
+
+.centerState h1,
+.centerState p {
+  margin: 0;
+}
+
+.centerState h1 {
+  color: var(--color-ink);
+  font-size: var(--font-size-title);
+  font-weight: 500;
+}
+
+.centerState button {
+  min-height: 42px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 12px;
+  color: var(--color-on-primary);
+  background: var(--color-primary);
+  cursor: pointer;
+}
+
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+@media (max-height: 840px) and (min-width: 921px) {
+  .contentShell {
+    padding-top: 20px;
+    padding-bottom: 22px;
+  }
+
+  .mindStage {
+    height: calc(100vh - 42px);
+    height: calc(100dvh - 42px);
+  }
+
+  .topPickStage {
+    min-height: calc(100vh - 42px);
+    min-height: calc(100dvh - 42px);
+  }
+
+  .mindStage {
+    gap: 16px;
+  }
+
+  .taskRow,
+  .completedTaskRow {
+    min-height: 52px;
+  }
+
+  .memoField textarea {
+    min-height: 76px;
+  }
+}
+
+@media (max-width: 1180px) {
+  .page {
+    grid-template-columns: 206px minmax(0, 1fr);
+  }
+
+  .contentShell {
+    padding-inline: 28px;
+  }
+
+  .topPickColumns,
+  .mindIntro {
+    grid-template-columns: 1fr;
+  }
+
+  .helperNote {
+    justify-self: stretch;
+  }
+}
+
+@media (max-width: 920px) {
+  .page {
+    height: auto;
+    min-height: 100vh;
+    overflow: visible;
+    grid-template-columns: 1fr;
+  }
+
+  .contentShell {
+    overflow: visible;
+    padding: 20px 16px 28px;
+  }
+
+  .mindStage,
+  .topPickStage {
+    height: auto;
+    min-height: 0;
+  }
+
+  .mindHeader,
+  .flowFooter {
+    display: grid;
+  }
+
+  .dateControls {
+    justify-content: flex-start;
+  }
+
+  .topPickHero {
+    padding: 70px 0 10px;
+  }
+}
+
+@media (max-width: 640px) {
+  .mindIntro h2,
+  .topPickHero h1 {
+    font-size: 1.45rem;
+  }
+
+  .taskRow,
+  .completedTaskRow {
+    grid-template-columns: 38px minmax(0, 1fr);
+  }
+
+  .rowActions {
+    grid-column: 2;
+  }
+
+  .addTaskDock {
+    grid-template-columns: 40px minmax(0, 1fr) 40px;
+    gap: 8px;
+  }
+
+  .topPickCard {
+    padding: 18px 16px;
+  }
+
+  .topPickColumns {
+    gap: 18px;
+  }
+
+  .selectedTaskPreview {
+    grid-template-columns: 1fr;
+  }
+
+  .estimateGroup > div {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .morningForm {
+    grid-template-columns: 1fr;
+  }
+}
