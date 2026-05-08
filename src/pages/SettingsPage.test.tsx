@@ -614,3 +614,38 @@ describe("SettingsPage web push section", () => {
     ).toBeInTheDocument();
   });
 });
+
+describe("SettingsPage behavior profile section", () => {
+  it("renders behavior profile fields from home behaviorProfile", async () => {
+    setupSettingsHandlers();
+    authenticate();
+
+    render(<App />);
+
+    expect(
+      await screen.findByRole("heading", { name: "행동 프로필" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("실행 난이도")).toBeInTheDocument();
+    expect(screen.getByText("보통")).toBeInTheDocument();
+    expect(screen.getByText("사회적 선호")).toBeInTheDocument();
+    expect(screen.getByText("혼자 조용히")).toBeInTheDocument();
+    expect(screen.getByText("회복 스타일")).toBeInTheDocument();
+    expect(screen.getByText("빠른 재시작")).toBeInTheDocument();
+    expect(screen.getByText("시험 트랙")).toBeInTheDocument();
+    expect(screen.getByText("내신 중심")).toBeInTheDocument();
+    expect(screen.getByText("선호 집중 시간")).toBeInTheDocument();
+    expect(screen.getByText("9:00 ~ 21:00")).toBeInTheDocument();
+    expect(screen.getByText("코칭 모드")).toBeInTheDocument();
+    expect(screen.getByText("다정하게")).toBeInTheDocument();
+  });
+
+  it("links '수정하기' to onboarding edit mode", async () => {
+    setupSettingsHandlers();
+    authenticate();
+
+    render(<App />);
+
+    const link = await screen.findByRole("link", { name: "수정하기" });
+    expect(link).toHaveAttribute("href", "/onboarding?mode=edit");
+  });
+});
