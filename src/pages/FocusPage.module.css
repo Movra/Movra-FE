@@ -511,6 +511,38 @@
   font-size: var(--font-size-body-sm);
 }
 
+.recoveryPostExam {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+
+.recoveryPostExam div {
+  min-width: 0;
+  padding: 10px;
+  border-radius: 12px;
+  background: var(--color-primary-pale);
+}
+
+.recoveryPostExam dt,
+.recoveryPostExam dd {
+  overflow: hidden;
+  margin: 0;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.recoveryPostExam dt {
+  color: var(--color-muted);
+  font-size: var(--font-size-caption);
+}
+
+.recoveryPostExam dd {
+  color: var(--color-ink);
+  font-size: var(--font-size-body-sm);
+}
+
 .savedReflection {
   display: grid;
   gap: 12px;

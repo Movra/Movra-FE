@@ -846,6 +846,35 @@ export function FocusPage() {
                 </div>
               </dl>
 
+              {recoveryCard.postExamMode &&
+              recoveryCard.recentExamTitle &&
+              recoveryCard.recentExamDate ? (
+                <dl className={styles.recoveryPostExam}>
+                  <div>
+                    <dt>시험명</dt>
+                    <dd>{recoveryCard.recentExamTitle}</dd>
+                  </div>
+                  <div>
+                    <dt>과목</dt>
+                    <dd>{recoveryCard.recentExamSubject ?? "-"}</dd>
+                  </div>
+                  <div>
+                    <dt>시험일</dt>
+                    <dd>{recoveryCard.recentExamDate}</dd>
+                  </div>
+                  <div>
+                    <dt>경과</dt>
+                    <dd>
+                      {recoveryCard.daysSinceRecentExam === null
+                        ? "-"
+                        : recoveryCard.daysSinceRecentExam === 0
+                          ? "오늘"
+                          : `${recoveryCard.daysSinceRecentExam}일 전`}
+                    </dd>
+                  </div>
+                </dl>
+              ) : null}
+
               {dailyReflectionQuery.isError ? (
                 <p className={styles.modalError} role="alert">
                   저장된 회복 기록을 불러오지 못했습니다.
