@@ -12,15 +12,31 @@ import {
 } from "../features/core-loop/displayUtils";
 import {
   getNotificationPreference,
+  getVapidPublicKey,
+  subscribeWebPush,
   updateNotificationPreference,
 } from "../features/notification/api";
 import type { NotificationPreferenceUpdateRequest } from "../features/notification/types";
+import { subscribeBrowserToWebPush } from "../features/notification/webPush";
 import { getErrorMessage } from "../shared/api/errors";
 import { queryKeys } from "../shared/queryKeys";
 import styles from "./SettingsPage.module.css";
 
 const homeTodayKey = queryKeys.homeToday();
 const notificationPreferenceKey = queryKeys.notificationPreference();
+const webPushEndpointStorageKey = "movra:webPushEndpoint";
+
+function isWebPushSupported() {
+  return (
+    typeof window !== "undefined" &&
+    "Notification" in window &&
+    typeof window.Notification !== "undefined" &&
+    "serviceWorker" in navigator &&
+    typeof navigator.serviceWorker !== "undefined" &&
+    "PushManager" in window &&
+    typeof window.PushManager !== "undefined"
+  );
+}
 
 type NotificationFormState = NotificationPreferenceUpdateRequest;
 
@@ -48,6 +64,19 @@ export function SettingsPage() {
   );
   const [actionError, setActionError] = useState<string | null>(null);
   const [actionNotice, setActionNotice] = useState<string | null>(null);
+  const [webPushSupported] = useState(() => isWebPushSupported());
+  const [webPushPermission, setWebPushPermission] =
+    useState<NotificationPermission>(() =>
+      isWebPushSupported() ? window.Notification.permission : "default",
+    );
+  const [storedEndpoint, setStoredEndpoint] = useState<string | null>(() =>
+    typeof window !== "undefined"
+      ? window.localStorage.getItem(webPushEndpointStorageKey)
+      : null,
+  );
+  const [webPushPending, setWebPushPending] = useState(false);
+  const [webPushExistingMatchesStored, setWebPushExistingMatchesStored] =
+    useState(false);
 
   const homeQuery = useQuery({
     enabled: Boolean(token),
@@ -80,6 +109,36 @@ export function SettingsPage() {
       weekendSchoolQuietEnabled: preference.weekendSchoolQuietEnabled,
     });
   }, [preference]);
+
+  useEffect(() => {
+    if (!webPushSupported) {
+      return;
+    }
+    if (webPushPermission !== "granted") {
+      setWebPushExistingMatchesStored(false);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const registration = await navigator.serviceWorker.ready;
+        const existing = await registration.pushManager.getSubscription();
+        if (cancelled) return;
+        if (existing && storedEndpoint && existing.endpoint === storedEndpoint) {
+          setWebPushExistingMatchesStored(true);
+        } else {
+          setWebPushExistingMatchesStored(false);
+        }
+      } catch {
+        if (!cancelled) {
+          setWebPushExistingMatchesStored(false);
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [storedEndpoint, webPushPermission, webPushSupported]);
 
   const updatePreferenceMutation = useMutation({
     mutationFn: (values: NotificationPreferenceUpdateRequest) =>
@@ -131,6 +190,50 @@ export function SettingsPage() {
     value: NotificationFormState[K],
   ) {
     setNotificationForm((current) => ({ ...current, [field]: value }));
+  }
+
+  async function handleWebPushClick() {
+    if (!webPushSupported) {
+      return;
+    }
+    setWebPushPending(true);
+    setActionError(null);
+    setActionNotice(null);
+    try {
+      let permission = window.Notification.permission;
+      if (permission === "default") {
+        permission = await window.Notification.requestPermission();
+      }
+      if (permission !== "granted") {
+        setWebPushPermission(permission);
+        setActionError("브라우저 설정에서 알림 권한을 허용해 주세요.");
+        return;
+      }
+      setWebPushPermission(permission);
+
+      const { publicKey } = await getVapidPublicKey();
+      const subscription = await subscribeBrowserToWebPush(publicKey);
+      await subscribeWebPush({
+        token,
+        values: {
+          contentEncoding: "aes128gcm",
+          endpoint: subscription.endpoint,
+          keys: subscription.keys,
+          userAgent: navigator.userAgent,
+        },
+      });
+      window.localStorage.setItem(
+        webPushEndpointStorageKey,
+        subscription.endpoint,
+      );
+      setStoredEndpoint(subscription.endpoint);
+      setWebPushExistingMatchesStored(true);
+      setActionNotice("Web Push 알림 등록을 완료했어요.");
+    } catch (error) {
+      setActionError(getErrorMessage(error));
+    } finally {
+      setWebPushPending(false);
+    }
   }
 
   function handleNotificationSubmit(event: FormEvent<HTMLFormElement>) {
@@ -354,6 +457,37 @@ export function SettingsPage() {
                 </button>
               </div>
             </form>
+          </section>
+
+          <section
+            aria-labelledby="web-push-section-title"
+            className={styles.section}
+          >
+            <h2 id="web-push-section-title">Web Push</h2>
+            <p>등록한 브라우저로 알림을 받을 수 있어요.</p>
+
+            {!webPushSupported ? (
+              <p>이 브라우저에서는 Web Push를 사용할 수 없습니다.</p>
+            ) : webPushPermission === "denied" ? (
+              <p>브라우저 설정에서 알림 권한을 허용해 주세요.</p>
+            ) : null}
+
+            <div className={styles.actions}>
+              <button
+                className={styles.primaryButton}
+                disabled={
+                  !webPushSupported ||
+                  webPushPermission === "denied" ||
+                  webPushPending
+                }
+                onClick={handleWebPushClick}
+                type="button"
+              >
+                {webPushExistingMatchesStored
+                  ? "다시 등록"
+                  : "Web Push 알림 받기"}
+              </button>
+            </div>
           </section>
         </div>
       </div>
