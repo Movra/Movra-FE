@@ -678,6 +678,18 @@
   cursor: pointer;
 }
 
+.recoveryReflectionLink {
+  align-self: flex-start;
+  color: var(--color-primary-active);
+  font-size: var(--font-size-caption);
+  text-decoration: none;
+}
+
+.recoveryReflectionLink:hover,
+.recoveryReflectionLink:focus-visible {
+  text-decoration: underline;
+}
+
 .centerState {
   display: grid;
   min-height: 100vh;

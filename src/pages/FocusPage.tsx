@@ -801,6 +801,12 @@ export function FocusPage() {
               className={styles.recoveryModal}
               role="dialog"
             >
+              <Link
+                className={styles.recoveryReflectionLink}
+                to="/reflection"
+              >
+                전체 회고 보기 →
+              </Link>
               <button
                 aria-label="Recovery Card 닫기"
                 className={styles.closeButton}
