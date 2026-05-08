@@ -436,6 +436,56 @@ describe("FocusPage", () => {
     expect(handlers.getStartRequests()).toEqual([3]);
   });
 
+  it("links to Tiny Win creation after a server preset focus stop", async () => {
+    const user = userEvent.setup();
+    setupFocusHandlers();
+    authenticate();
+
+    render(<App />);
+
+    await user.click(await screen.findByRole("button", { name: "5분" }));
+    await user.click(screen.getByRole("button", { name: "Focus 시작하기" }));
+    expect(await screen.findByRole("status")).toHaveTextContent(
+      "집중 세션을 시작했습니다.",
+    );
+
+    await user.click(screen.getByRole("button", { name: "Focus 멈추기" }));
+    expect(await screen.findByRole("status")).toHaveTextContent(
+      "집중 세션을 멈췄습니다.",
+    );
+
+    const tinyWinLink = await screen.findByRole("link", {
+      name: /작은 성취/,
+    });
+    expect(tinyWinLink).toHaveAttribute("href", "/reflection?focus=new");
+
+    await user.click(screen.getByRole("button", { name: "닫기" }));
+    expect(
+      screen.queryByRole("link", { name: /작은 성취/ }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("does not show Tiny Win link after a continuous focus stop", async () => {
+    const user = userEvent.setup();
+    setupFocusHandlers();
+    authenticate();
+
+    render(<App />);
+
+    await user.click(await screen.findByRole("button", { name: "계속" }));
+    await user.click(screen.getByRole("button", { name: "Focus 시작하기" }));
+    expect(await screen.findByRole("status")).toHaveTextContent(
+      "계속 Focus를 시작했습니다. 이 타이머는 아직 서버에 기록되지 않습니다.",
+    );
+
+    await user.click(screen.getByRole("button", { name: "Focus 멈추기" }));
+    expect(await screen.findByText("계속 Focus를 멈췄습니다.")).toBeInTheDocument();
+
+    expect(
+      screen.queryByRole("link", { name: /작은 성취/ }),
+    ).not.toBeInTheDocument();
+  });
+
   it("shows a retry state when focus data fails to load", async () => {
     const user = userEvent.setup();
     setupFocusHandlers({ failFocusTimes: 2 });
