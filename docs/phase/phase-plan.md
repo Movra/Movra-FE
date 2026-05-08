@@ -489,7 +489,8 @@
 
 ## Phase 11. Settings, Notification, And Web Push
 
-상태: 미구현
+상태: 완료
+완료 기록: `docs/phase/phase-11-settings-notification-web-push.md`
 
 목표:
 - `/settings` placeholder를 실제 설정 화면으로 교체하고, 알림 정책과 Web Push 구독을 구현한다.
