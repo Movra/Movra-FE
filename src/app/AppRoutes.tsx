@@ -10,6 +10,7 @@ import { OAuthProfileSetupPage } from "../pages/OAuthProfileSetupPage";
 import { OnboardingPage } from "../pages/OnboardingPage";
 import { PlanningPage } from "../pages/PlanningPage";
 import { ReflectionPage } from "../pages/ReflectionPage";
+import { SettingsPage } from "../pages/SettingsPage";
 import { SignupPage } from "../pages/SignupPage";
 import { TimetablePage } from "../pages/TimetablePage";
 import { useAuth } from "../features/auth/useAuth";
@@ -20,7 +21,6 @@ const placeholderRoutes = [
   { path: "/focus", title: "집중" },
   { path: "/statistics", title: "통계" },
   { path: "/friends", title: "친구" },
-  { path: "/settings", title: "설정" },
 ] as const;
 
 export function AppRoutes() {
@@ -37,6 +37,7 @@ export function AppRoutes() {
   const isFutureVisionRoute = location.pathname === "/future-vision";
   const isExamSchedulesRoute = location.pathname === "/exam-schedules";
   const isReflectionRoute = location.pathname === "/reflection";
+  const isSettingsRoute = location.pathname === "/settings";
   const isPlaceholderRoute = placeholderRoutes.some(
     (route) => route.path === location.pathname,
   );
@@ -53,6 +54,7 @@ export function AppRoutes() {
       isFutureVisionRoute ||
       isExamSchedulesRoute ||
       isReflectionRoute ||
+      isSettingsRoute ||
       isPlaceholderRoute ? null : (
         <header className={styles.header}>
           <nav className={styles.nav} aria-label="주요 메뉴">
@@ -89,6 +91,7 @@ export function AppRoutes() {
                   isFutureVisionRoute ||
                   isExamSchedulesRoute ||
                   isReflectionRoute ||
+                  isSettingsRoute ||
                   isPlaceholderRoute
                 ? styles.dashboardMain
                 : styles.main
@@ -154,6 +157,14 @@ export function AppRoutes() {
             element={
               <RequireAuth>
                 <ReflectionPage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/settings"
+            element={
+              <RequireAuth>
+                <SettingsPage />
               </RequireAuth>
             }
           />
