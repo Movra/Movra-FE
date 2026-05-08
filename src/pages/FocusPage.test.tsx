@@ -410,6 +410,27 @@ describe("FocusPage", () => {
     ]);
   });
 
+  it("links to the full reflection page from the recovery modal", async () => {
+    const user = userEvent.setup();
+    setupFocusHandlers({
+      recoveryCard: createRecoveryCard({
+        needsRecovery: true,
+        recoveryType: "MISSED_FOCUS",
+        suggestedAction: "다시 켜볼까요?",
+        suggestedDurationMinutes: 5,
+      }),
+    });
+    authenticate();
+
+    render(<App />);
+
+    await user.click(await screen.findByRole("button", { name: "카드 열기" }));
+    const reflectionLink = await screen.findByRole("link", {
+      name: /전체 회고 보기/,
+    });
+    expect(reflectionLink).toHaveAttribute("href", "/reflection");
+  });
+
   it("starts Recovery Focus from the modal with the suggested preset", async () => {
     const user = userEvent.setup();
     const handlers = setupFocusHandlers({
