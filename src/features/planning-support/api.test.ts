@@ -6,6 +6,7 @@ import {
   createFutureVision,
   deleteExamSchedule,
   deleteSlot,
+  getExamSchedule,
   getExamSchedules,
   getFutureVision,
   getNextExamSchedule,
@@ -497,6 +498,50 @@ describe("planning support timetable api", () => {
     expect(fetchMock).toHaveBeenNthCalledWith(
       1,
       "http://localhost:8080/exam-schedules/season-mode",
+      expect.objectContaining({ method: "GET" }),
+    );
+
+    const request = fetchMock.mock.calls[0]?.[1] as RequestInit;
+    expect(new Headers(request.headers).get("Authorization")).toBe(
+      "Bearer access-token",
+    );
+  });
+
+  it("returns a single exam schedule by id", async () => {
+    const fetchMock = vi.fn().mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          daysUntil: 21,
+          examDate: "2026-06-04",
+          examScheduleId: "exam-1",
+          examType: "MOPYUNG",
+          seasonMode: "MOPYUNG_FOCUSED",
+          subject: "수학",
+          title: "6월 모의평가",
+        }),
+        {
+          headers: { "content-type": "application/json" },
+          status: 200,
+        },
+      ),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(
+      getExamSchedule({ examScheduleId: "exam-1", token: "access-token" }),
+    ).resolves.toEqual({
+      daysUntil: 21,
+      examDate: "2026-06-04",
+      examScheduleId: "exam-1",
+      examType: "MOPYUNG",
+      seasonMode: "MOPYUNG_FOCUSED",
+      subject: "수학",
+      title: "6월 모의평가",
+    });
+
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      1,
+      "http://localhost:8080/exam-schedules/exam-1",
       expect.objectContaining({ method: "GET" }),
     );
 
