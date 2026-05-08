@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
-import { Navigate, useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Navigate, useNavigate, useSearchParams } from "react-router-dom";
 
 import characterDefault from "../assets/auth/character-default.png";
 import characterMindSweep from "../assets/auth/character-mindsweep.png";
@@ -12,7 +12,9 @@ import { ApiClientError } from "../shared/api/client";
 import { useAuth } from "../features/auth/useAuth";
 import {
   createBehaviorProfile,
+  getBehaviorProfile,
   getOnboardingContext,
+  updateBehaviorProfile,
 } from "../features/onboarding/api";
 import type {
   BehaviorProfileRequest,
@@ -22,6 +24,7 @@ import type {
   RecoveryStyle,
   SocialPreference,
 } from "../features/onboarding/types";
+import { queryKeys } from "../shared/queryKeys";
 import styles from "./OnboardingPage.module.css";
 
 const totalSteps = 6;
@@ -251,6 +254,8 @@ export function OnboardingPage() {
   const { accessToken, isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const [searchParams] = useSearchParams();
+  const isEditMode = searchParams.get("mode") === "edit";
   const token = accessToken ?? "";
   const [stepIndex, setStepIndex] = useState(0);
   const [profile, setProfile] = useState<BehaviorProfileRequest>(defaultProfile);
@@ -261,6 +266,31 @@ export function OnboardingPage() {
     queryFn: getOnboardingContext,
     queryKey: ["onboarding-context"],
   });
+
+  const behaviorProfileQuery = useQuery({
+    enabled: isEditMode && Boolean(token),
+    queryFn: () => getBehaviorProfile({ token }),
+    queryKey: queryKeys.behaviorProfileMe(),
+  });
+
+  useEffect(() => {
+    if (!isEditMode) {
+      return;
+    }
+    const data = behaviorProfileQuery.data;
+    if (!data) {
+      return;
+    }
+    setProfile({
+      coachingMode: data.coachingMode,
+      examTrack: data.examTrack,
+      executionDifficulty: data.executionDifficulty,
+      preferredFocusEndHour: data.preferredFocusEndHour,
+      preferredFocusStartHour: data.preferredFocusStartHour,
+      recoveryStyle: data.recoveryStyle,
+      socialPreference: data.socialPreference,
+    });
+  }, [behaviorProfileQuery.data, isEditMode]);
 
   const createProfileMutation = useMutation({
     mutationFn: (values: BehaviorProfileRequest) =>
@@ -277,6 +307,19 @@ export function OnboardingPage() {
     onSuccess: () => {
       queryClient.removeQueries({ queryKey: ["home-today"] });
       navigate("/", { replace: true });
+    },
+  });
+
+  const updateProfileMutation = useMutation({
+    mutationFn: (values: BehaviorProfileRequest) =>
+      updateBehaviorProfile({ token, values }),
+    onError: (error) => {
+      setErrorMessage(getErrorMessage(error));
+    },
+    onSuccess: () => {
+      queryClient.removeQueries({ queryKey: ["home-today"] });
+      queryClient.removeQueries({ queryKey: queryKeys.behaviorProfileMe() });
+      navigate("/settings", { replace: true });
     },
   });
 
@@ -303,6 +346,10 @@ export function OnboardingPage() {
     }
 
     setErrorMessage(null);
+    if (isEditMode) {
+      updateProfileMutation.mutate(values);
+      return;
+    }
     createProfileMutation.mutate(values);
   }
 
@@ -385,14 +432,16 @@ export function OnboardingPage() {
           <strong className={styles.progressCount}>
             {stepIndex + 1} / {totalSteps}
           </strong>
-          <button
-            className={styles.skipButton}
-            disabled={createProfileMutation.isPending}
-            onClick={skipOnboarding}
-            type="button"
-          >
-            건너뛰기
-          </button>
+          {isEditMode ? null : (
+            <button
+              className={styles.skipButton}
+              disabled={createProfileMutation.isPending}
+              onClick={skipOnboarding}
+              type="button"
+            >
+              건너뛰기
+            </button>
+          )}
         </div>
 
         <section className={styles.card}>
@@ -670,7 +719,11 @@ export function OnboardingPage() {
         <div className={styles.bottomBar}>
           <button
             className={styles.previousButton}
-            disabled={stepIndex === 0 || createProfileMutation.isPending}
+            disabled={
+              stepIndex === 0 ||
+              createProfileMutation.isPending ||
+              updateProfileMutation.isPending
+            }
             onClick={goPrevious}
             type="button"
           >
@@ -678,12 +731,16 @@ export function OnboardingPage() {
           </button>
           <button
             className={styles.nextButton}
-            disabled={createProfileMutation.isPending}
+            disabled={
+              createProfileMutation.isPending ||
+              updateProfileMutation.isPending
+            }
             onClick={goNext}
             type="button"
           >
             {stepIndex === totalSteps - 1
-              ? createProfileMutation.isPending
+              ? createProfileMutation.isPending ||
+                updateProfileMutation.isPending
                 ? "저장 중"
                 : "완료"
               : "다음"}
