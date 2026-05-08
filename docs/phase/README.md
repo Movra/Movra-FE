@@ -8,6 +8,7 @@
 - `phase-legacy.md`: 과거 개별 Phase 완료 파일을 통합한 레거시 기록이다.
 - `phase-4-daily-planning-and-toppick.md`: Phase 4 완료 범위와 검증, 남은 위험을 기록한다.
 - `phase-6-future-vision-and-exam-schedule.md`: Phase 6 Future Vision/Exam Schedule 완료 범위와 검증, 남은 위험을 기록한다.
+- `phase-8-feedback-loop.md`: Phase 8 Feedback Loop 완료 범위와 검증, 남은 위험을 기록한다.
 - `Phase-추가적사항.md`: 제공 이미지와 디자인 참고 사항을 보존하는 보조 기록이다.
 - 앞으로 새 Phase 완료 기록이 필요하면, `phase-plan.md`의 현재 번호 체계를 기준으로 새 완료 기록을 추가한다.
 

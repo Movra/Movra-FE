@@ -365,7 +365,10 @@
 
 ## Phase 8. Feedback Loop
 
-상태: 미구현
+상태: 완료
+
+완료 기록:
+- `docs/phase/phase-8-feedback-loop.md`
 
 목표:
 - `/reflection` placeholder를 실제 회고 화면으로 교체하고, 실행 직후 보상과 회고 루프를 완성한다.
