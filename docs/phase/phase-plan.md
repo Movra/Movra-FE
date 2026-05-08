@@ -404,7 +404,10 @@
 
 ## Phase 9. Exam Cycle And Recovery Hardening
 
-상태: 미구현
+상태: 완료
+
+완료 기록:
+- `docs/phase/phase-9-exam-cycle-recovery-hardening.md`
 
 목표:
 - 시험 일정과 Recovery Card를 시험 사이클에 맞게 보강한다.
