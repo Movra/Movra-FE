@@ -1,6 +1,15 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type FormEvent, useEffect, useState } from "react";
-import { Navigate } from "react-router-dom";
+import { Link, Navigate } from "react-router-dom";
+
+import type {
+  BehaviorProfile,
+  CoachingMode,
+  ExamTrack,
+  ExecutionDifficulty,
+  RecoveryStyle,
+  SocialPreference,
+} from "../features/onboarding/types";
 
 import characterDefault from "../assets/auth/character-default.png";
 import { useAuth } from "../features/auth/useAuth";
@@ -25,6 +34,41 @@ import styles from "./SettingsPage.module.css";
 const homeTodayKey = queryKeys.homeToday();
 const notificationPreferenceKey = queryKeys.notificationPreference();
 const webPushEndpointStorageKey = "movra:webPushEndpoint";
+
+const executionDifficultyLabels: Record<ExecutionDifficulty, string> = {
+  HIGH: "어려움",
+  LOW: "쉬움",
+  MEDIUM: "보통",
+};
+
+const socialPreferenceLabels: Record<SocialPreference, string> = {
+  HIGH: "같이 확인하기",
+  LOW: "혼자 조용히",
+  MEDIUM: "적당히 함께",
+};
+
+const recoveryStyleLabels: Record<RecoveryStyle, string> = {
+  NEEDS_REFLECTION: "차분한 회고",
+  QUICK_RESTART: "빠른 재시작",
+  SLOW_REBUILDER: "천천히 회복",
+};
+
+const examTrackLabels: Record<ExamTrack, string> = {
+  BOTH: "둘 다",
+  MOPYUNG_SUNUNG: "모평/수능 중심",
+  NAESIN: "내신 중심",
+  UNDECIDED: "아직 몰라요",
+};
+
+const coachingModeLabels: Record<CoachingMode, string> = {
+  GENTLE: "다정하게",
+  NEUTRAL: "차분하게",
+  STRICT: "분명하게",
+};
+
+function describeFocusHours(profile: BehaviorProfile) {
+  return `${profile.preferredFocusStartHour}:00 ~ ${profile.preferredFocusEndHour}:00`;
+}
 
 function isWebPushSupported() {
   return (
@@ -457,6 +501,53 @@ export function SettingsPage() {
                 </button>
               </div>
             </form>
+          </section>
+
+          <section
+            aria-labelledby="behavior-profile-section-title"
+            className={styles.section}
+          >
+            <h2 id="behavior-profile-section-title">행동 프로필</h2>
+            <p>지금 내 루프에 맞춰진 기본값이에요. 언제든 수정할 수 있어요.</p>
+
+            <dl className={styles.profileList}>
+              <div>
+                <dt>실행 난이도</dt>
+                <dd>
+                  {executionDifficultyLabels[home.behaviorProfile.executionDifficulty]}
+                </dd>
+              </div>
+              <div>
+                <dt>사회적 선호</dt>
+                <dd>
+                  {socialPreferenceLabels[home.behaviorProfile.socialPreference]}
+                </dd>
+              </div>
+              <div>
+                <dt>회복 스타일</dt>
+                <dd>
+                  {recoveryStyleLabels[home.behaviorProfile.recoveryStyle]}
+                </dd>
+              </div>
+              <div>
+                <dt>시험 트랙</dt>
+                <dd>{examTrackLabels[home.behaviorProfile.examTrack]}</dd>
+              </div>
+              <div>
+                <dt>선호 집중 시간</dt>
+                <dd>{describeFocusHours(home.behaviorProfile)}</dd>
+              </div>
+              <div>
+                <dt>코칭 모드</dt>
+                <dd>{coachingModeLabels[home.behaviorProfile.coachingMode]}</dd>
+              </div>
+            </dl>
+
+            <div className={styles.actions}>
+              <Link className={styles.editLink} to="/onboarding?mode=edit">
+                수정하기
+              </Link>
+            </div>
           </section>
 
           <section
