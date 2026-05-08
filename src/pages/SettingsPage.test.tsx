@@ -117,7 +117,7 @@ describe("SettingsPage notification section", () => {
       expect(screen.getByLabelText("일일 집중 알림")).not.toBeChecked(),
     );
     expect(screen.getByLabelText("일일 TopPick 알림")).toBeChecked();
-    expect(screen.getByLabelText("일일 시간표 알림")).toBeChecked();
+    expect(screen.getByLabelText("일일 시간표 알림")).not.toBeChecked();
     expect(screen.getByLabelText("Accountability 알림")).toBeChecked();
     expect(screen.getByLabelText("학교 시간 무음")).not.toBeChecked();
     expect(screen.getByLabelText("주말 학교 시간 무음")).toBeChecked();

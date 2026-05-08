@@ -23,5 +23,10 @@ describe("queryKeys", () => {
       "exam-schedules",
       "exam-1",
     ]);
+    expect(queryKeys.notificationPreference()).toEqual([
+      "notification",
+      "preferences",
+    ]);
+    expect(queryKeys.behaviorProfileMe()).toEqual(["behavior-profile", "me"]);
   });
 });
