@@ -41,12 +41,16 @@
 - `/onboarding`
 - `/`
 - `/planning`
+- `/timetable`
+- `/future-vision`
+- `/exam-schedules`
 
 현재 제품 기능 상태:
 - App Foundation, Auth, Onboarding은 구현되어 있다.
-- 홈 대시보드는 구현되어 있다. Home Today 조회, 요약 카드, TopPick 표시, 시간표 요약 표시, 알림/친구 상태 요약 표시, Focus 시작/종료 CTA가 있다.
+- 홈 대시보드는 구현되어 있다. Home Today 조회, 요약 카드, TopPick 표시, Future Vision/다음 시험 CTA, 시간표 요약 표시, 알림/친구 상태 요약 표시, Focus 시작/종료 CTA가 있다.
 - Daily Planning과 TopPick 선정 화면은 구현되어 있다. MindSweep 기반 입력/정리 후 TopPick 하나를 선택하는 단계형 흐름이다.
 - Timetable 화면은 구현되어 있다. TopPick/일반 할 일/직접 입력 Slot 배정, Slot 시간 수정/삭제, 빈 timetable 계약 확인 상태가 있다.
+- Future Vision과 Exam Schedule 화면은 구현되어 있다. Future Vision canvas 작성/수정과 시험 일정 목록/생성/수정/삭제 흐름이 있다.
 - 그 외 제품 기능 화면은 아직 미구현이다.
 
 현재 placeholder 라우트:
@@ -62,8 +66,8 @@
 - Home Today 타입에는 `notificationPreference`, `friendAccountability`, 시험 후 Recovery 필드, `showFocusTimingCard`가 반영되어 있으나 독립 기능 화면과 mutation은 없다.
 
 현재 작업 순서:
-- 다음 구현 대상은 Phase 6 `Future Vision And Exam Schedule`이다.
-- 이후 Phase 7 `Focus And Recovery` 순서로 홈의 링크와 실제 기능을 연결한다.
+- 다음 구현 대상은 Phase 7 `Focus And Recovery`이다.
+- 이후 Phase 8 `Feedback Loop` 순서로 홈의 링크와 실제 기능을 연결한다.
 
 ## Phase 0. App Foundation
 
@@ -280,7 +284,10 @@
 
 ## Phase 6. Future Vision And Exam Schedule
 
-상태: 미구현
+상태: 완료
+
+완료 기록:
+- `docs/phase/phase-6-future-vision-and-exam-schedule.md`
 
 목표:
 - 계획 보조 기능 중 Future Vision과 Exam Schedule을 실제 접근 가능한 화면으로 구현한다.
