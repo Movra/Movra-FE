@@ -8,6 +8,7 @@ import {
   deleteSlot,
   getExamSchedules,
   getFutureVision,
+  getNextExamSchedule,
   getTimetable,
   rescheduleSlot,
   updateExamSchedule,
@@ -390,5 +391,69 @@ describe("planning support timetable api", () => {
       "http://localhost:8080/exam-schedules/exam-1",
       expect.objectContaining({ method: "DELETE" }),
     );
+  });
+
+  it("returns the next exam schedule when present", async () => {
+    const fetchMock = vi.fn().mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          daysUntil: 7,
+          examDate: "2026-05-10",
+          examScheduleId: "exam-next",
+          examType: "NAESIN",
+          seasonMode: "NAESIN_INTENSIVE",
+          subject: "수학",
+          title: "중간고사",
+        }),
+        {
+          headers: { "content-type": "application/json" },
+          status: 200,
+        },
+      ),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(
+      getNextExamSchedule({ token: "access-token" }),
+    ).resolves.toEqual({
+      daysUntil: 7,
+      examDate: "2026-05-10",
+      examScheduleId: "exam-next",
+      examType: "NAESIN",
+      seasonMode: "NAESIN_INTENSIVE",
+      subject: "수학",
+      title: "중간고사",
+    });
+
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      1,
+      "http://localhost:8080/exam-schedules/next",
+      expect.objectContaining({ method: "GET" }),
+    );
+
+    const request = fetchMock.mock.calls[0]?.[1] as RequestInit;
+    expect(new Headers(request.headers).get("Authorization")).toBe(
+      "Bearer access-token",
+    );
+  });
+
+  it("returns null when next exam schedule lookup is 404", async () => {
+    const fetchMock = vi.fn().mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          message: "다음 시험 일정을 찾을 수 없습니다.",
+          statusCode: 404,
+        }),
+        {
+          headers: { "content-type": "application/json" },
+          status: 404,
+        },
+      ),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(
+      getNextExamSchedule({ token: "access-token" }),
+    ).resolves.toBeNull();
   });
 });
