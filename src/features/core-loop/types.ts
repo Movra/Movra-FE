@@ -114,6 +114,17 @@ export type ExamSchedule = {
   seasonMode: string;
 };
 
+export type SeasonMode =
+  | "SUNUNG_INTENSIVE"
+  | "NAESIN_INTENSIVE"
+  | "MOPYUNG_FOCUSED"
+  | "BASELINE_MODE";
+
+export type SeasonModeResponse = {
+  seasonMode: SeasonMode;
+  nextExamSchedule: ExamSchedule | null;
+};
+
 export type NotificationPreference = {
   notificationPreferenceId: string;
   dailyFocusEnabled: boolean;

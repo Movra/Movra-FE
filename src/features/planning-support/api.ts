@@ -3,6 +3,7 @@ import type {
   ExamSchedule,
   ExamType,
   FutureVision,
+  SeasonModeResponse,
   Timetable,
 } from "../core-loop/types";
 
@@ -195,6 +196,12 @@ export function getNextExamSchedule({ token }: AuthenticatedRequest) {
       throw error;
     },
   );
+}
+
+export function getSeasonMode({ token }: AuthenticatedRequest) {
+  return apiRequest<SeasonModeResponse>("/exam-schedules/season-mode", {
+    token,
+  });
 }
 
 export function createExamSchedule({
