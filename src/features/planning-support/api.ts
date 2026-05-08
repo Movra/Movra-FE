@@ -1,6 +1,5 @@
 import { apiRequest } from "../../shared/api/client";
 import type {
-  DailyPlanTask,
   ExamSchedule,
   ExamType,
   FutureVision,
@@ -9,11 +8,6 @@ import type {
 
 type AuthenticatedRequest = {
   token: string;
-};
-
-type MorningTaskRequest = AuthenticatedRequest & {
-  dailyPlanId: string;
-  taskId: string;
 };
 
 type TimeRange = {
@@ -89,76 +83,6 @@ export function updateYearlyFutureVision({
     method: "PATCH",
     token,
   });
-}
-
-export function createMorningTask({
-  content,
-  targetDate,
-  token,
-}: AuthenticatedRequest & { content: string; targetDate: string }) {
-  return apiRequest<void>(`/morning-tasks?targetDate=${targetDate}`, {
-    body: { content },
-    method: "POST",
-    token,
-  });
-}
-
-export function getMorningTasks({
-  targetDate,
-  token,
-}: AuthenticatedRequest & { targetDate: string }) {
-  return apiRequest<DailyPlanTask[]>(`/morning-tasks?targetDate=${targetDate}`, {
-    token,
-  });
-}
-
-export function updateMorningTask({
-  content,
-  dailyPlanId,
-  taskId,
-  token,
-}: MorningTaskRequest & { content: string }) {
-  return apiRequest<void>(`/morning-tasks/${dailyPlanId}/${taskId}`, {
-    body: { content },
-    method: "PUT",
-    token,
-  });
-}
-
-export function deleteMorningTask({
-  dailyPlanId,
-  taskId,
-  token,
-}: MorningTaskRequest) {
-  return apiRequest<void>(`/morning-tasks/${dailyPlanId}/${taskId}`, {
-    method: "DELETE",
-    token,
-  });
-}
-
-export function completeMorningTask({
-  dailyPlanId,
-  taskId,
-  token,
-}: MorningTaskRequest) {
-  return apiRequest<void>(`/morning-tasks/${dailyPlanId}/${taskId}/complete`, {
-    method: "PATCH",
-    token,
-  });
-}
-
-export function uncompleteMorningTask({
-  dailyPlanId,
-  taskId,
-  token,
-}: MorningTaskRequest) {
-  return apiRequest<void>(
-    `/morning-tasks/${dailyPlanId}/${taskId}/uncomplete`,
-    {
-      method: "PATCH",
-      token,
-    },
-  );
 }
 
 export function getTimetable({
@@ -296,5 +220,3 @@ export function deleteExamSchedule({
     token,
   });
 }
-
-export type { DailyPlanTask };
