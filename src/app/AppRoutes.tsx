@@ -9,6 +9,7 @@ import { LoginPage } from "../pages/LoginPage";
 import { OAuthProfileSetupPage } from "../pages/OAuthProfileSetupPage";
 import { OnboardingPage } from "../pages/OnboardingPage";
 import { PlanningPage } from "../pages/PlanningPage";
+import { ReflectionPage } from "../pages/ReflectionPage";
 import { SignupPage } from "../pages/SignupPage";
 import { TimetablePage } from "../pages/TimetablePage";
 import { useAuth } from "../features/auth/useAuth";
@@ -17,7 +18,6 @@ import styles from "./AppRoutes.module.css";
 
 const placeholderRoutes = [
   { path: "/focus", title: "집중" },
-  { path: "/reflection", title: "회고" },
   { path: "/statistics", title: "통계" },
   { path: "/friends", title: "친구" },
   { path: "/settings", title: "설정" },
@@ -36,6 +36,7 @@ export function AppRoutes() {
   const isTimetableRoute = location.pathname === "/timetable";
   const isFutureVisionRoute = location.pathname === "/future-vision";
   const isExamSchedulesRoute = location.pathname === "/exam-schedules";
+  const isReflectionRoute = location.pathname === "/reflection";
   const isPlaceholderRoute = placeholderRoutes.some(
     (route) => route.path === location.pathname,
   );
@@ -51,6 +52,7 @@ export function AppRoutes() {
       isTimetableRoute ||
       isFutureVisionRoute ||
       isExamSchedulesRoute ||
+      isReflectionRoute ||
       isPlaceholderRoute ? null : (
         <header className={styles.header}>
           <nav className={styles.nav} aria-label="주요 메뉴">
@@ -86,6 +88,7 @@ export function AppRoutes() {
                   isTimetableRoute ||
                   isFutureVisionRoute ||
                   isExamSchedulesRoute ||
+                  isReflectionRoute ||
                   isPlaceholderRoute
                 ? styles.dashboardMain
                 : styles.main
@@ -143,6 +146,14 @@ export function AppRoutes() {
             element={
               <RequireAuth>
                 <ExamSchedulesPage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/reflection"
+            element={
+              <RequireAuth>
+                <ReflectionPage />
               </RequireAuth>
             }
           />

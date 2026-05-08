@@ -37,7 +37,7 @@ function setupReflectionHandlers({
   initialReflection = null,
   initialTinyWins = [],
 }: SetupReflectionHandlersOptions = {}) {
-  let home = initialHome;
+  const home = initialHome;
   let reflection = initialReflection;
   let tinyWins = initialTinyWins;
   let nextIndex = 100;
@@ -268,7 +268,7 @@ describe("ReflectionPage", () => {
     render(<App />);
 
     const wentWell = await screen.findByLabelText("오늘 잘한 것");
-    expect(wentWell).toHaveValue("잘함");
+    await waitFor(() => expect(wentWell).toHaveValue("잘함"));
 
     fireEvent.change(wentWell, { target: { value: "수정된 잘함" } });
     await user.click(screen.getByRole("button", { name: "회고 수정" }));
@@ -342,9 +342,10 @@ describe("ReflectionPage", () => {
       await screen.findByText("아직 남긴 작은 성취가 없어요."),
     ).toBeInTheDocument();
 
-    await user.click(
-      screen.getByRole("button", { name: "+ 작은 성취 추가" }),
-    );
+    const addButtons = screen.getAllByRole("button", {
+      name: "+ 작은 성취 추가",
+    });
+    await user.click(addButtons[0]);
     const dialog = await screen.findByRole("dialog", {
       name: "작은 성취 추가",
     });
