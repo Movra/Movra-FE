@@ -186,6 +186,15 @@ export function getExamSchedules({ token }: AuthenticatedRequest) {
   return apiRequest<ExamSchedule[]>("/exam-schedules", { token });
 }
 
+export function getExamSchedule({
+  examScheduleId,
+  token,
+}: AuthenticatedRequest & { examScheduleId: string }) {
+  return apiRequest<ExamSchedule>(`/exam-schedules/${examScheduleId}`, {
+    token,
+  });
+}
+
 export function getNextExamSchedule({ token }: AuthenticatedRequest) {
   return apiRequest<ExamSchedule>("/exam-schedules/next", { token }).catch(
     (error) => {
