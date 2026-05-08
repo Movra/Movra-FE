@@ -16,18 +16,18 @@ import {
   unselectTopPick,
   updateMindSweep,
 } from "../features/core-loop/api";
-import type {
-  DailyPlanTask,
-  FriendAccountability,
-  HomeToday,
-  TopPick,
-} from "../features/core-loop/types";
-import { ApiClientError } from "../shared/api/client";
+import {
+  getFriendAccountabilityText,
+  getNextExamLabel,
+} from "../features/core-loop/displayUtils";
+import { formatTopPickLimit, getTopPickLimit } from "../features/core-loop/topPickPolicy";
+import type { DailyPlanTask, HomeToday, TopPick } from "../features/core-loop/types";
+import { getErrorMessage } from "../shared/api/errors";
+import { queryKeys } from "../shared/queryKeys";
 import styles from "./PlanningPage.module.css";
 
-const homeTodayKey = ["home-today"] as const;
+const homeTodayKey = queryKeys.homeToday();
 const estimatedMinuteOptions = [30, 60, 80, 90, 120] as const;
-const topPickLimit = 1;
 const toastVisibleMs = 1000;
 const toastFadeMs = 240;
 
@@ -150,52 +150,6 @@ function formatDisplayDate(targetDate: string) {
     2,
     "0",
   )} (${weekdays[date.getDay()]})`;
-}
-
-function formatExamDistance(daysUntil: number) {
-  if (daysUntil === 0) {
-    return "D-Day";
-  }
-
-  return daysUntil > 0 ? `D-${daysUntil}` : `D+${Math.abs(daysUntil)}`;
-}
-
-function getNextExamLabel(home: HomeToday) {
-  return home.nextExamSchedule
-    ? `${home.nextExamSchedule.title} ${formatExamDistance(
-        home.nextExamSchedule.daysUntil,
-      )}`
-    : "목표 설정 전";
-}
-
-function getFriendAccountabilityText(
-  friendAccountability: FriendAccountability | null,
-) {
-  if (!friendAccountability?.relationCreated) {
-    return "연결된 친구 없음";
-  }
-
-  if (friendAccountability.watchedByFriend && friendAccountability.watchingFriend) {
-    return "서로 진행 상황 공유 중";
-  }
-
-  if (friendAccountability.watchedByFriend) {
-    return "친구가 나를 지켜보는 중";
-  }
-
-  if (friendAccountability.watchingFriend) {
-    return "내가 친구를 지켜보는 중";
-  }
-
-  return friendAccountability.inviteCodeStatus ?? "친구 연결 대기 중";
-}
-
-function getErrorMessage(error: unknown) {
-  if (error instanceof ApiClientError) {
-    return error.message;
-  }
-
-  return "요청 처리에 실패했습니다.";
 }
 
 function getTopPickForTask(task: DailyPlanTask, topPicks: TopPick[]) {
@@ -337,6 +291,7 @@ export function PlanningPage() {
     );
   }, [taskContentOrder, tasks]);
   const topPicks = home?.topPicks ?? [];
+  const topPickLimit = getTopPickLimit(home?.behaviorProfile?.executionDifficulty);
   const selectedTask =
     orderedTasks.find((task) => task.taskId === selectedTaskId) ??
     orderedTasks[0] ??
@@ -632,7 +587,24 @@ export function PlanningPage() {
   const selectedEstimatedText = selectedTask
     ? getTaskEstimatedMinutes(selectedTask, topPicks)
     : null;
-  const currentTopPickCount = Math.min(topPicks.length, topPickLimit);
+  const currentTopPickCount = topPicks.length;
+  const topPickLimitText = formatTopPickLimit(topPickLimit);
+  const topPickHelpText =
+    topPickLimit === 1
+      ? "TopPick은 오늘 반드시 지킬 한 가지 핵심 실행입니다."
+      : `TopPick은 오늘 반드시 지킬 핵심 실행을 최대 ${topPickLimit}개까지 고르는 방식입니다.`;
+  const topPickIntroText =
+    topPickLimit === 1
+      ? "너무 많은 일은 시작을 방해해요. 오늘, 반드시 지킬 단 하나만 고르세요."
+      : `온보딩 응답에 맞춰 오늘 반드시 지킬 실행을 최대 ${topPickLimit}개까지 고르세요.`;
+  const topPickListNote =
+    topPickLimit === 1
+      ? "TopPick은 하루에 하나만 선택할 수 있어요."
+      : `TopPick은 하루에 최대 ${topPickLimit}개까지 선택할 수 있어요.`;
+  const topPickLimitNote =
+    topPickLimit === 1
+      ? "오늘 선택 가능한 TopPick을 이미 골랐어요. 먼저 기존 선택을 해제해 주세요."
+      : `오늘 선택 가능한 TopPick ${topPickLimit}개를 모두 골랐어요. 먼저 기존 선택을 해제해 주세요.`;
   const nextExamLabel = getNextExamLabel(home);
   const friendAccountabilityText = getFriendAccountabilityText(
     home.friendAccountability,
@@ -797,9 +769,7 @@ export function PlanningPage() {
                 <button
                   className={styles.helpButton}
                   onClick={() =>
-                    handleMutationNotice(
-                      "TopPick은 오늘 반드시 지킬 한 가지 핵심 실행입니다.",
-                    )
+                    handleMutationNotice(topPickHelpText)
                   }
                   type="button"
                 >
@@ -807,11 +777,9 @@ export function PlanningPage() {
                 </button>
                 <p className={styles.kicker}>Daily Planning</p>
                 <h1 id="top-pick-title">
-                  오늘의 TopPick <strong>하나</strong>를 선택해 주세요
+                  오늘의 TopPick <strong>{topPickLimitText}</strong>를 선택해 주세요
                 </h1>
-                <p>
-                  너무 많은 일은 시작을 방해해요. 오늘, 반드시 지킬 단 하나만 고르세요.
-                </p>
+                <p>{topPickIntroText}</p>
               </header>
 
               <form className={styles.topPickForm} onSubmit={handleSubmitTopPick}>
@@ -869,7 +837,7 @@ export function PlanningPage() {
                       )}
                     </div>
                     <p className={styles.listNote}>
-                      TopPick은 하루에 하나만 선택할 수 있어요.
+                      {topPickListNote}
                     </p>
                   </div>
 
@@ -966,7 +934,7 @@ export function PlanningPage() {
 
                 {topPickLimitReached ? (
                   <p className={styles.limitNote}>
-                    오늘 선택 가능한 TopPick을 이미 골랐어요. 먼저 기존 선택을 해제해 주세요.
+                    {topPickLimitNote}
                   </p>
                 ) : (
                   <p className={styles.secureNote}>선택한 TopPick은 나만 볼 수 있어요.</p>

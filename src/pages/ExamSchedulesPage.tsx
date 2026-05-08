@@ -6,12 +6,12 @@ import characterDefault from "../assets/auth/character-default.png";
 import { useAuth } from "../features/auth/useAuth";
 import { AppSidebar } from "../features/core-loop/AppSidebar";
 import { getHomeToday } from "../features/core-loop/api";
-import type {
-  ExamSchedule,
-  ExamType,
-  FriendAccountability,
-  HomeToday,
-} from "../features/core-loop/types";
+import {
+  formatExamDistance,
+  getFriendAccountabilityText,
+  getNextExamLabel,
+} from "../features/core-loop/displayUtils";
+import type { ExamSchedule, ExamType } from "../features/core-loop/types";
 import {
   createExamSchedule,
   deleteExamSchedule,
@@ -19,7 +19,8 @@ import {
   updateExamSchedule,
   type ExamScheduleRequest,
 } from "../features/planning-support/api";
-import { ApiClientError } from "../shared/api/client";
+import { getErrorMessage } from "../shared/api/errors";
+import { queryKeys } from "../shared/queryKeys";
 import styles from "./ExamSchedulesPage.module.css";
 
 type DialogState =
@@ -27,8 +28,8 @@ type DialogState =
   | { exam: ExamSchedule; mode: "edit" }
   | null;
 
-const homeTodayKey = ["home-today"] as const;
-const examSchedulesKey = ["exam-schedules"] as const;
+const homeTodayKey = queryKeys.homeToday();
+const examSchedulesKey = queryKeys.examSchedules();
 const examTypeOptions: Array<{ label: string; value: ExamType }> = [
   { label: "내신", value: "NAESIN" },
   { label: "모의고사", value: "MOPYUNG" },
@@ -36,22 +37,6 @@ const examTypeOptions: Array<{ label: string; value: ExamType }> = [
   { label: "수능", value: "SUNUNG" },
   { label: "기타", value: "OTHER" },
 ];
-
-function getErrorMessage(error: unknown) {
-  if (error instanceof ApiClientError) {
-    return error.message;
-  }
-
-  return "요청 처리에 실패했습니다.";
-}
-
-function formatExamDistance(daysUntil: number) {
-  if (daysUntil === 0) {
-    return "D-Day";
-  }
-
-  return daysUntil > 0 ? `D-${daysUntil}` : `D+${Math.abs(daysUntil)}`;
-}
 
 function formatExamDate(examDate: string) {
   const [year, month, day] = examDate.split("-").map(Number);
@@ -103,36 +88,6 @@ function getProgress(daysUntil: number) {
   }
 
   return Math.max(8, Math.round(100 - Math.min(daysUntil, 180) / 1.8));
-}
-
-function getNextExamLabel(home: HomeToday) {
-  return home.nextExamSchedule
-    ? `${home.nextExamSchedule.title} ${formatExamDistance(
-        home.nextExamSchedule.daysUntil,
-      )}`
-    : "목표 설정 전";
-}
-
-function getFriendAccountabilityText(
-  friendAccountability: FriendAccountability | null,
-) {
-  if (!friendAccountability?.relationCreated) {
-    return "연결된 친구 없음";
-  }
-
-  if (friendAccountability.watchedByFriend && friendAccountability.watchingFriend) {
-    return "서로 진행 상황 공유 중";
-  }
-
-  if (friendAccountability.watchedByFriend) {
-    return "친구가 나를 지켜보는 중";
-  }
-
-  if (friendAccountability.watchingFriend) {
-    return "내가 친구를 지켜보는 중";
-  }
-
-  return friendAccountability.inviteCodeStatus ?? "친구 연결 대기 중";
 }
 
 function createEmptyForm(targetDate: string): ExamScheduleRequest {

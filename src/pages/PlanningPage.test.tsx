@@ -3,7 +3,10 @@ import { fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { App } from "../app/App";
-import { createHomeTodayFixture } from "../test/fixtures";
+import {
+  createBehaviorProfileFixture,
+  createHomeTodayFixture,
+} from "../test/fixtures";
 import { server } from "../test/server";
 import type { DailyPlanTask, HomeToday, TopPick } from "../features/core-loop/types";
 
@@ -216,12 +219,12 @@ describe("PlanningPage", () => {
     await user.click(screen.getByRole("button", { name: "TopPick 선정하기" }));
     expect(
       await screen.findByRole("heading", {
-        name: /오늘의 TopPick\s+하나\s*를 선택해 주세요/,
+        name: /오늘의 TopPick\s+2개\s*를 선택해 주세요/,
       }),
     ).toBeInTheDocument();
 
     const topPickPanel = screen.getByRole("region", {
-      name: /오늘의 TopPick\s+하나\s*를 선택해 주세요/,
+      name: /오늘의 TopPick\s+2개\s*를 선택해 주세요/,
     });
     expect(
       screen.queryByRole("heading", { name: "내일 아침 첫 행동" }),
@@ -301,5 +304,94 @@ describe("PlanningPage", () => {
 
     expect(screen.getByText("즉시 표시되는 할 일")).toBeInTheDocument();
     expect(await screen.findByText("MindSweep에 할 일을 추가했습니다.")).toBeInTheDocument();
+  });
+
+  it("uses onboarding execution difficulty for the TopPick limit", async () => {
+    const user = userEvent.setup();
+    setupPlanningHandlers(
+      createHomeTodayFixture({
+        behaviorProfile: createBehaviorProfileFixture({
+          executionDifficulty: "MEDIUM",
+        }),
+        todayDailyPlan: {
+          dailyPlanId: "daily-plan-id",
+          morningTasks: [],
+          planDate: "2026-04-24",
+          tasks: [
+            {
+              completed: false,
+              content: "first top pick",
+              taskId: "task-1",
+              taskType: "GENERAL",
+              topPickDetail: { estimatedMinutes: 30, memo: "first" },
+              topPicked: true,
+            },
+            {
+              completed: false,
+              content: "second top pick",
+              taskId: "task-2",
+              taskType: "GENERAL",
+              topPickDetail: { estimatedMinutes: 60, memo: "second" },
+              topPicked: true,
+            },
+            {
+              completed: false,
+              content: "third candidate",
+              taskId: "task-3",
+              taskType: "GENERAL",
+              topPicked: false,
+            },
+          ],
+        },
+        topPicks: [
+          {
+            completed: false,
+            content: "first top pick",
+            estimatedMinutes: 30,
+            memo: "first",
+            taskId: "task-1",
+          },
+          {
+            completed: false,
+            content: "second top pick",
+            estimatedMinutes: 60,
+            memo: "second",
+            taskId: "task-2",
+          },
+        ],
+      }),
+    );
+    authenticate();
+
+    render(<App />);
+
+    await user.click(
+      await screen.findByRole("button", { name: "TopPick 선정하기" }),
+    );
+
+    const topPickPanel = await screen.findByRole("region", {
+      name: /오늘의 TopPick\s+2개\s*를 선택해 주세요/,
+    });
+    expect(within(topPickPanel).getByText("2/2")).toBeInTheDocument();
+    expect(
+      within(topPickPanel).getByText(
+        "TopPick은 하루에 최대 2개까지 선택할 수 있어요.",
+      ),
+    ).toBeInTheDocument();
+
+    await user.click(
+      within(topPickPanel).getByRole("option", { name: /third candidate/ }),
+    );
+
+    expect(
+      within(topPickPanel).getByRole("button", {
+        name: "이 항목을 오늘의 TopPick으로 선택하기",
+      }),
+    ).toBeDisabled();
+    expect(
+      within(topPickPanel).getByText(
+        "오늘 선택 가능한 TopPick 2개를 모두 골랐어요. 먼저 기존 선택을 해제해 주세요.",
+      ),
+    ).toBeInTheDocument();
   });
 });

@@ -23,9 +23,12 @@ import {
   updateMorningTask,
   uncompleteMindSweep,
 } from "../features/core-loop/api";
+import {
+  getFriendAccountabilityText,
+  getNextExamLabel,
+} from "../features/core-loop/displayUtils";
 import type {
   DailyPlanTask,
-  FriendAccountability,
   HomeToday,
   Timetable,
   TimetableSlot,
@@ -39,16 +42,33 @@ import {
   getTimetable,
   rescheduleSlot,
 } from "../features/planning-support/api";
+import {
+  clamp,
+  formatDuration,
+  formatMinuteRange,
+  formatSlotChipText,
+  formatSlotRange,
+  getHourLabels,
+  getSlotDurationMinutes,
+  getSortedSlots,
+  getTimelineRange,
+  hasTimeOverlap,
+  hourRowHeight,
+  isCompactSlotHeight,
+  minSlotMinutes,
+  minutesToTimeInput,
+  normalizeDuration,
+  normalizeTimeInput,
+  parseTimeToMinutes,
+  snapToStep,
+  toApiTime,
+  validateTimeRange,
+} from "../features/planning-support/timetableUtils";
 import { ApiClientError } from "../shared/api/client";
+import { queryKeys } from "../shared/queryKeys";
 import styles from "./TimetablePage.module.css";
 
-const homeTodayKey = ["home-today"] as const;
-const hourRowHeight = 64;
-const compactSlotHeight = 80;
-const minTimelineHour = 0;
-const maxTimelineHour = 24;
-const snapMinutes = 15;
-const minSlotMinutes = 15;
+const homeTodayKey = queryKeys.homeToday();
 const unassignedTopPickMessage =
   "시간표에 배정되지 않은 TopPick이 있습니다. TopPick을 모두 배정한 뒤 일반 할 일을 넣어 주세요.";
 
@@ -250,44 +270,6 @@ function isTopPickPlacementError(error: unknown) {
   );
 }
 
-function getFriendAccountabilityText(
-  friendAccountability: FriendAccountability | null,
-) {
-  if (!friendAccountability?.relationCreated) {
-    return "연결된 친구 없음";
-  }
-
-  if (friendAccountability.watchedByFriend && friendAccountability.watchingFriend) {
-    return "서로 진행 상황 공유 중";
-  }
-
-  if (friendAccountability.watchedByFriend) {
-    return "친구가 나를 지켜보는 중";
-  }
-
-  if (friendAccountability.watchingFriend) {
-    return "내가 친구를 지켜보는 중";
-  }
-
-  return friendAccountability.inviteCodeStatus ?? "친구 연결 대기 중";
-}
-
-function formatExamDistance(daysUntil: number) {
-  if (daysUntil === 0) {
-    return "D-Day";
-  }
-
-  return daysUntil > 0 ? `D-${daysUntil}` : `D+${Math.abs(daysUntil)}`;
-}
-
-function getNextExamLabel(home: HomeToday) {
-  return home.nextExamSchedule
-    ? `${home.nextExamSchedule.title} ${formatExamDistance(
-        home.nextExamSchedule.daysUntil,
-      )}`
-    : "목표 설정 전";
-}
-
 function getDisplayDateParts(targetDate: string) {
   const [year, month, day] = targetDate.split("-").map(Number);
   const date = new Date(year, month - 1, day);
@@ -312,152 +294,6 @@ function getDisplayDateParts(targetDate: string) {
     display: `${year}년 ${month}월 ${day}일 (${weekdays[date.getDay()]})`,
     isoDate: targetDate,
   };
-}
-
-function normalizeTimeInput(time: string) {
-  return time.length >= 5 ? time.slice(0, 5) : time;
-}
-
-function toApiTime(time: string) {
-  const normalized = normalizeTimeInput(time);
-
-  return normalized.length === 5 ? `${normalized}:00` : normalized;
-}
-
-function parseTimeToMinutes(time: string) {
-  const normalized = normalizeTimeInput(time);
-  const [hour, minute] = normalized.split(":").map(Number);
-
-  if (!Number.isInteger(hour) || !Number.isInteger(minute)) {
-    return 0;
-  }
-
-  return hour * 60 + minute;
-}
-
-function clamp(value: number, min: number, max: number) {
-  return Math.min(max, Math.max(min, value));
-}
-
-function snapToStep(minutes: number) {
-  return Math.round(minutes / snapMinutes) * snapMinutes;
-}
-
-function minutesToTimeInput(minutes: number) {
-  const normalizedMinutes = clamp(minutes, 0, 24 * 60);
-  const hours = Math.floor(normalizedMinutes / 60);
-  const remainingMinutes = normalizedMinutes % 60;
-
-  return `${String(hours).padStart(2, "0")}:${String(remainingMinutes).padStart(
-    2,
-    "0",
-  )}`;
-}
-
-function normalizeDuration(minutes: number) {
-  return Math.max(minSlotMinutes, Math.ceil(minutes / snapMinutes) * snapMinutes);
-}
-
-function getSlotDurationMinutes(slot: TimetableSlot) {
-  return Math.max(
-    0,
-    parseTimeToMinutes(slot.endTime) - parseTimeToMinutes(slot.startTime),
-  );
-}
-
-function hasTimeOverlap({
-  endMinute,
-  ignoreSlotId,
-  slots,
-  startMinute,
-}: {
-  endMinute: number;
-  ignoreSlotId?: string;
-  slots: TimetableSlot[];
-  startMinute: number;
-}) {
-  return slots.some((slot) => {
-    if (slot.slotId === ignoreSlotId) {
-      return false;
-    }
-
-    const slotStart = parseTimeToMinutes(slot.startTime);
-    const slotEnd = parseTimeToMinutes(slot.endTime);
-
-    return startMinute < slotEnd && endMinute > slotStart;
-  });
-}
-
-function validateTimeRange({
-  endMinute,
-  ignoreSlotId,
-  slots,
-  startMinute,
-}: {
-  endMinute: number;
-  ignoreSlotId?: string;
-  slots: TimetableSlot[];
-  startMinute: number;
-}) {
-  if (endMinute <= startMinute) {
-    return "종료 시간은 시작 시간보다 뒤여야 합니다.";
-  }
-
-  if (
-    startMinute < minTimelineHour * 60 ||
-    endMinute > maxTimelineHour * 60
-  ) {
-    return "시간표 범위 안에서 배치해 주세요.";
-  }
-
-  if (hasTimeOverlap({ endMinute, ignoreSlotId, slots, startMinute })) {
-    return "이미 배치된 시간과 겹칩니다. 빈 시간대에 놓아 주세요.";
-  }
-
-  return null;
-}
-
-function formatDuration(minutes: number) {
-  if (minutes <= 0) {
-    return "-";
-  }
-
-  const hours = Math.floor(minutes / 60);
-  const remainingMinutes = minutes % 60;
-
-  if (hours === 0) {
-    return `${remainingMinutes}분`;
-  }
-
-  return remainingMinutes === 0
-    ? `${hours}시간`
-    : `${hours}시간 ${remainingMinutes}분`;
-}
-
-function formatSlotRange(slot: TimetableSlot) {
-  return `${normalizeTimeInput(slot.startTime)} - ${normalizeTimeInput(slot.endTime)}`;
-}
-
-function formatMinuteRange(startMinute: number, endMinute: number) {
-  return `${minutesToTimeInput(startMinute)} - ${minutesToTimeInput(endMinute)}`;
-}
-
-function isCompactSlotHeight(height: number) {
-  return height < compactSlotHeight;
-}
-
-function formatSlotChipText({
-  endMinute,
-  height,
-  startMinute,
-}: {
-  endMinute: number;
-  height: number;
-  startMinute: number;
-}) {
-  return isCompactSlotHeight(height)
-    ? formatMinuteRange(startMinute, endMinute)
-    : formatDuration(endMinute - startMinute);
 }
 
 function getTopPickTaskIds(topPicks: TopPick[]) {
@@ -486,36 +322,6 @@ function getTaskDuration(task: DailyPlanTask) {
 
 function getTopPickDuration(topPick: TopPick) {
   return normalizeDuration(topPick.estimatedMinutes);
-}
-
-function getSortedSlots(timetable: Timetable | null) {
-  return [...(timetable?.slots ?? [])].sort(
-    (left, right) =>
-      parseTimeToMinutes(left.startTime) - parseTimeToMinutes(right.startTime),
-  );
-}
-
-function getTimelineRange(slots: TimetableSlot[]) {
-  const earliestStart = slots.reduce(
-    (earliest, slot) => Math.min(earliest, parseTimeToMinutes(slot.startTime)),
-    minTimelineHour * 60,
-  );
-  const latestEnd = slots.reduce(
-    (latest, slot) => Math.max(latest, parseTimeToMinutes(slot.endTime)),
-    maxTimelineHour * 60,
-  );
-  const startHour = Math.min(minTimelineHour, Math.floor(earliestStart / 60));
-  const endHour = Math.max(maxTimelineHour, Math.ceil(latestEnd / 60));
-
-  return { endHour, startHour };
-}
-
-function getHourLabels(startHour: number, endHour: number) {
-  return Array.from({ length: endHour - startHour + 1 }, (_, index) => {
-    const hour = startHour + index;
-
-    return `${String(hour).padStart(2, "0")}:00`;
-  });
 }
 
 function getSlotClass(slot: TimetableSlot, index: number, isTopPick = slot.topPick) {
@@ -868,8 +674,8 @@ export function TimetablePage() {
   const home = homeQuery.data;
   const dailyPlanId =
     home?.todayDailyPlan?.dailyPlanId ?? home?.timetable?.dailyPlanId ?? "";
-  const timetableQueryKey = ["timetable", dailyPlanId] as const;
-  const topPicksQueryKey = ["top-picks", dailyPlanId] as const;
+  const timetableQueryKey = queryKeys.timetable(dailyPlanId);
+  const topPicksQueryKey = queryKeys.topPicks(dailyPlanId);
   const timetableQuery = useQuery({
     enabled: Boolean(token && dailyPlanId),
     queryFn: () => getTimetable({ dailyPlanId, token }),

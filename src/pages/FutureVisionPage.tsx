@@ -13,13 +13,18 @@ import characterDefault from "../assets/auth/character-default.png";
 import { useAuth } from "../features/auth/useAuth";
 import { AppSidebar } from "../features/core-loop/AppSidebar";
 import { getHomeToday } from "../features/core-loop/api";
-import type { FriendAccountability, HomeToday } from "../features/core-loop/types";
+import {
+  getFriendAccountabilityText,
+  getNextExamLabel,
+} from "../features/core-loop/displayUtils";
 import {
   createFutureVision,
   updateWeeklyFutureVision,
   updateYearlyFutureVision,
 } from "../features/planning-support/api";
-import { ApiClientError } from "../shared/api/client";
+import { getErrorMessage } from "../shared/api/errors";
+import { validateImageFile } from "../shared/file/imageValidation";
+import { queryKeys } from "../shared/queryKeys";
 import styles from "./FutureVisionPage.module.css";
 
 type VisionTab = "yearly" | "weekly";
@@ -28,7 +33,7 @@ type VisionImages = Record<VisionTab, string | null>;
 type VisionDirtyState = Record<VisionTab, boolean>;
 type VisionHistory = Record<VisionTab, string[]>;
 
-const homeTodayKey = ["home-today"] as const;
+const homeTodayKey = queryKeys.homeToday();
 const canvasWidth = 960;
 const canvasHeight = 540;
 const visionTabs: Array<{ helper: string; label: string; value: VisionTab }> = [
@@ -44,56 +49,7 @@ const visionTabs: Array<{ helper: string; label: string; value: VisionTab }> = [
   },
 ];
 const colorOptions = ["#1f4a30", "#2f9e5b", "#4f83cc", "#d95c51", "#f1a53a"];
-
-function getErrorMessage(error: unknown) {
-  if (error instanceof ApiClientError) {
-    return error.message;
-  }
-
-  if (error instanceof Error) {
-    return error.message;
-  }
-
-  return "요청 처리에 실패했습니다.";
-}
-
-function formatExamDistance(daysUntil: number) {
-  if (daysUntil === 0) {
-    return "D-Day";
-  }
-
-  return daysUntil > 0 ? `D-${daysUntil}` : `D+${Math.abs(daysUntil)}`;
-}
-
-function getNextExamLabel(home: HomeToday) {
-  return home.nextExamSchedule
-    ? `${home.nextExamSchedule.title} ${formatExamDistance(
-        home.nextExamSchedule.daysUntil,
-      )}`
-    : "목표 설정 전";
-}
-
-function getFriendAccountabilityText(
-  friendAccountability: FriendAccountability | null,
-) {
-  if (!friendAccountability?.relationCreated) {
-    return "연결된 친구 없음";
-  }
-
-  if (friendAccountability.watchedByFriend && friendAccountability.watchingFriend) {
-    return "서로 진행 상황 공유 중";
-  }
-
-  if (friendAccountability.watchedByFriend) {
-    return "친구가 나를 지켜보는 중";
-  }
-
-  if (friendAccountability.watchingFriend) {
-    return "내가 친구를 지켜보는 중";
-  }
-
-  return friendAccountability.inviteCodeStatus ?? "친구 연결 대기 중";
-}
+const canvasConversionError = "이미지 데이터를 만들지 못했습니다. 다시 시도해주세요.";
 
 function fillCanvasBackground(canvas: HTMLCanvasElement) {
   const context = canvas.getContext("2d");
@@ -108,8 +64,19 @@ function fillCanvasBackground(canvas: HTMLCanvasElement) {
 
 function dataUrlToFile(dataUrl: string, fileName: string) {
   const [header, base64] = dataUrl.split(",");
+  if (!header || !base64) {
+    throw new Error(canvasConversionError);
+  }
+
   const mime = /data:(.*);base64/.exec(header)?.[1] ?? "image/png";
-  const binary = window.atob(base64);
+  let binary = "";
+
+  try {
+    binary = window.atob(base64);
+  } catch {
+    throw new Error(canvasConversionError);
+  }
+
   const bytes = new Uint8Array(binary.length);
 
   for (let index = 0; index < binary.length; index += 1) {
@@ -117,6 +84,14 @@ function dataUrlToFile(dataUrl: string, fileName: string) {
   }
 
   return new File([bytes], fileName, { type: mime });
+}
+
+function canvasToDataUrl(canvas: HTMLCanvasElement) {
+  try {
+    return canvas.toDataURL("image/png");
+  } catch {
+    throw new Error(canvasConversionError);
+  }
 }
 
 function getCanvasPoint(event: PointerEvent<HTMLCanvasElement>) {
@@ -220,7 +195,7 @@ export function FutureVisionPage() {
       return visionImages[tab];
     }
 
-    const dataUrl = canvas.toDataURL("image/png");
+    const dataUrl = canvasToDataUrl(canvas);
     setVisionImages((current) => ({ ...current, [tab]: dataUrl }));
     return dataUrl;
   }
@@ -237,7 +212,7 @@ export function FutureVisionPage() {
       return;
     }
 
-    const snapshot = canvas.toDataURL("image/png");
+    const snapshot = canvasToDataUrl(canvas);
     setHistory((current) => ({
       ...current,
       [tab]: [...current[tab].slice(-9), snapshot],
@@ -341,11 +316,24 @@ export function FutureVisionPage() {
       return;
     }
 
+    const validationError = validateImageFile(file);
+    if (validationError) {
+      event.target.value = "";
+      setActionNotice(null);
+      setActionError(validationError);
+      return;
+    }
+
     const reader = new FileReader();
     reader.onload = () => {
       const dataUrl = String(reader.result ?? "");
       setVisionImages((current) => ({ ...current, [activeTab]: dataUrl }));
       setDirtyState((current) => ({ ...current, [activeTab]: true }));
+      setActionError(null);
+    };
+    reader.onerror = () => {
+      setActionNotice(null);
+      setActionError("이미지를 불러오지 못했습니다.");
     };
     reader.readAsDataURL(file);
   }

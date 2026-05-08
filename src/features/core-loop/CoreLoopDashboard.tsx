@@ -7,12 +7,13 @@ import characterFocus from "../../assets/auth/character-focus.png";
 import characterRecovery from "../../assets/auth/character-recovery.png";
 import characterSuccess from "../../assets/auth/character-success.png";
 import characterTopPick from "../../assets/auth/character-toppick.png";
-import { ApiClientError } from "../../shared/api/client";
+import { getErrorMessage } from "../../shared/api/errors";
+import { queryKeys } from "../../shared/queryKeys";
 import { useAuth } from "../auth/useAuth";
 import { AppSidebar } from "./AppSidebar";
 import { getHomeToday, startFocusSession, stopFocusSession } from "./api";
+import { formatExamDistance, getFriendAccountabilityText } from "./displayUtils";
 import type {
-  FriendAccountability,
   HomeToday,
   NotificationPreference,
   TimetableSlot,
@@ -20,7 +21,7 @@ import type {
 } from "./types";
 import styles from "./CoreLoopDashboard.module.css";
 
-const homeTodayKey = ["home-today"] as const;
+const homeTodayKey = queryKeys.homeToday();
 const focusPresetOptions = [3, 5, 10, 25] as const;
 
 function HeaderIcon({ type }: { type: "bell" | "calendar" }) {
@@ -245,36 +246,6 @@ function getNotificationSummary(home: HomeToday) {
   };
 }
 
-function getFriendAccountabilityText(
-  friendAccountability: FriendAccountability | null,
-) {
-  if (!friendAccountability?.relationCreated) {
-    return "연결된 친구 없음";
-  }
-
-  if (friendAccountability.watchedByFriend && friendAccountability.watchingFriend) {
-    return "서로 진행 상황 공유 중";
-  }
-
-  if (friendAccountability.watchedByFriend) {
-    return "친구가 나를 지켜보는 중";
-  }
-
-  if (friendAccountability.watchingFriend) {
-    return "내가 친구를 지켜보는 중";
-  }
-
-  return friendAccountability.inviteCodeStatus ?? "친구 연결 대기 중";
-}
-
-function formatExamDistance(daysUntil: number) {
-  if (daysUntil === 0) {
-    return "D-Day";
-  }
-
-  return daysUntil > 0 ? `D-${daysUntil}` : `D+${Math.abs(daysUntil)}`;
-}
-
 function formatSlotTime(time: string) {
   return time.length >= 5 ? time.slice(0, 5) : time;
 }
@@ -308,14 +279,6 @@ function getSortedTimetableSlots(slots: TimetableSlot[]) {
       parseSlotTimeToMinutes(right.endTime)
     );
   });
-}
-
-function getErrorMessage(error: unknown) {
-  if (error instanceof ApiClientError) {
-    return error.message;
-  }
-
-  return "요청 처리에 실패했습니다.";
 }
 
 function getTopPickProgress(topPick: TopPick, index: number) {
