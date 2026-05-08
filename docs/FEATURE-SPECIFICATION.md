@@ -786,7 +786,7 @@ PRD의 유료 상품인 AI 성장 리포트는 현재 백엔드 구현 범위에
 
 ### 19-2. 프론트엔드/PWA
 
-현재 저장소는 백엔드 중심이며, PWA 설치, 오프라인, 모바일 UI 구현은 별도 범위다.
+현재 FE 저장소는 React/Vite 기반 프론트엔드 중심이며, PWA 설치와 오프라인 지원은 별도 범위다. 모바일 UI는 주요 화면별 반응형 레이아웃으로 검증한다.
 
 ---
 
@@ -795,6 +795,8 @@ PRD의 유료 상품인 AI 성장 리포트는 현재 백엔드 구현 범위에
 ### 20-1. 보안
 
 - 인증이 필요한 모든 API는 JWT를 요구한다.
+- 현재 FE는 access/refresh token을 `sessionStorage`에 저장하고, 과거 `localStorage` token은 읽는 즉시 `sessionStorage`로 이관한 뒤 제거한다.
+- 장기적으로 backend가 지원하면 refresh token은 HttpOnly Secure SameSite cookie로 이전하고, FE는 access token만 memory state에 둔다.
 - CORS는 credentialed request에서 wildcard origin을 허용하지 않는다.
 - Refresh Token은 해시해서 저장한다.
 - WebSocket 채팅도 인증과 참여자 검증을 수행한다.
@@ -859,25 +861,21 @@ PRD의 유료 상품인 AI 성장 리포트는 현재 백엔드 구현 범위에
 
 ## 23. 검증 기준
 
-현재 기능 명세 기준 백엔드 기본 검증 명령은 다음과 같다.
+현재 FE 저장소 기준 기본 검증 명령은 다음과 같다.
 
 ```bash
-.\gradlew.bat compileJava
-.\gradlew.bat test
+npm run lint
+npm run typecheck
+npm test
+npm run build
+.\scripts\agent-verify.ps1 -Mode quick
 ```
 
-강제 재검증이 필요한 경우:
+visual verification이 필요한 경우:
 
 ```bash
-.\gradlew.bat test --rerun-tasks
+npm run smoke:visual
 ```
-
-2026-05-02 기준 강제 테스트 결과:
-
-| 항목 | 결과 |
-|------|------|
-| 전체 테스트 | 349개 |
-| 실패 | 0개 |
 | 에러 | 0개 |
 | 스킵 | 0개 |
 
