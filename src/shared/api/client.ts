@@ -8,6 +8,9 @@ type ApiAuthConfig = {
 
 let apiAuthConfig: ApiAuthConfig | null = null;
 let refreshAccessTokenPromise: Promise<string | null> | null = null;
+const defaultErrorMessage = "요청 처리에 실패했습니다.";
+const invalidJsonMessage = "응답을 해석하지 못했습니다.";
+const networkErrorMessage = "네트워크 연결을 확인해 주세요.";
 
 export class ApiClientError extends Error {
   readonly status: number;
@@ -48,7 +51,16 @@ async function readJson<T>(response: Response): Promise<T | undefined> {
     return undefined;
   }
 
-  return (await response.json()) as T;
+  const rawBody = await response.text();
+  if (!rawBody.trim()) {
+    return undefined;
+  }
+
+  try {
+    return JSON.parse(rawBody) as T;
+  } catch {
+    throw new ApiClientError(response.status, invalidJsonMessage);
+  }
 }
 
 function createHeaders(options: ApiRequestOptions, token?: string) {
@@ -78,12 +90,16 @@ async function request(
 ) {
   const { body, headers } = createHeaders(options, token);
 
-  return fetch(createUrl(path), {
-    method: options.method ?? "GET",
-    headers,
-    body,
-    signal: options.signal,
-  });
+  try {
+    return await fetch(createUrl(path), {
+      method: options.method ?? "GET",
+      headers,
+      body,
+      signal: options.signal,
+    });
+  } catch {
+    throw new ApiClientError(0, networkErrorMessage);
+  }
 }
 
 async function createApiError(response: Response) {
@@ -91,7 +107,7 @@ async function createApiError(response: Response) {
 
   return new ApiClientError(
     response.status,
-    errorResponse?.message ?? "요청 처리에 실패했습니다.",
+    errorResponse?.message ?? defaultErrorMessage,
     errorResponse,
   );
 }

@@ -65,6 +65,61 @@ describe("apiRequest", () => {
     } satisfies Partial<ApiClientError>);
   });
 
+  it("uses the default API error message for non-JSON error bodies", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response("service unavailable", {
+          headers: { "content-type": "text/plain" },
+          status: 503,
+        }),
+      ),
+    );
+
+    await expect(apiRequest("/daily-plans")).rejects.toMatchObject({
+      message: "요청 처리에 실패했습니다.",
+      name: "ApiClientError",
+      status: 503,
+    } satisfies Partial<ApiClientError>);
+  });
+
+  it("returns undefined for successful empty responses", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(new Response(null, { status: 204 })),
+    );
+
+    await expect(apiRequest<void>("/future-vision/weekly")).resolves.toBeUndefined();
+  });
+
+  it("wraps invalid JSON responses as API client errors", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response("{", {
+          headers: { "content-type": "application/json" },
+          status: 200,
+        }),
+      ),
+    );
+
+    await expect(apiRequest("/home/today")).rejects.toMatchObject({
+      message: "응답을 해석하지 못했습니다.",
+      name: "ApiClientError",
+      status: 200,
+    } satisfies Partial<ApiClientError>);
+  });
+
+  it("wraps network failures as API client errors", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new TypeError("failed")));
+
+    await expect(apiRequest("/home/today")).rejects.toMatchObject({
+      message: "네트워크 연결을 확인해 주세요.",
+      name: "ApiClientError",
+      status: 0,
+    } satisfies Partial<ApiClientError>);
+  });
+
   it("refreshes the access token once and retries expired authenticated requests", async () => {
     const fetchMock = vi
       .fn()
