@@ -17,5 +17,11 @@ describe("queryKeys", () => {
     expect(queryKeys.topPicks("daily-plan")).toEqual(["top-picks", "daily-plan"]);
     expect(queryKeys.tinyWins()).toEqual(["tiny-wins"]);
     expect(queryKeys.tinyWin("tiny-win-id")).toEqual(["tiny-wins", "tiny-win-id"]);
+    expect(queryKeys.nextExamSchedule()).toEqual(["exam-schedules", "next"]);
+    expect(queryKeys.seasonMode()).toEqual(["exam-schedules", "season-mode"]);
+    expect(queryKeys.examSchedule("exam-1")).toEqual([
+      "exam-schedules",
+      "exam-1",
+    ]);
   });
 });
