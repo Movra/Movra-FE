@@ -1,4 +1,4 @@
-import { apiRequest } from "../../shared/api/client";
+import { ApiClientError, apiRequest } from "../../shared/api/client";
 import type {
   ExamSchedule,
   ExamType,
@@ -183,6 +183,18 @@ export function deleteSlot({
 
 export function getExamSchedules({ token }: AuthenticatedRequest) {
   return apiRequest<ExamSchedule[]>("/exam-schedules", { token });
+}
+
+export function getNextExamSchedule({ token }: AuthenticatedRequest) {
+  return apiRequest<ExamSchedule>("/exam-schedules/next", { token }).catch(
+    (error) => {
+      if (error instanceof ApiClientError && error.status === 404) {
+        return null;
+      }
+
+      throw error;
+    },
+  );
 }
 
 export function createExamSchedule({
