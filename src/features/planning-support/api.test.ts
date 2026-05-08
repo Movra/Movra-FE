@@ -9,6 +9,7 @@ import {
   getExamSchedules,
   getFutureVision,
   getNextExamSchedule,
+  getSeasonMode,
   getTimetable,
   rescheduleSlot,
   updateExamSchedule,
@@ -455,5 +456,53 @@ describe("planning support timetable api", () => {
     await expect(
       getNextExamSchedule({ token: "access-token" }),
     ).resolves.toBeNull();
+  });
+
+  it("returns the current season mode and next exam", async () => {
+    const fetchMock = vi.fn().mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          nextExamSchedule: {
+            daysUntil: 7,
+            examDate: "2026-05-10",
+            examScheduleId: "exam-next",
+            examType: "NAESIN",
+            seasonMode: "NAESIN_INTENSIVE",
+            subject: "수학",
+            title: "중간고사",
+          },
+          seasonMode: "NAESIN_INTENSIVE",
+        }),
+        {
+          headers: { "content-type": "application/json" },
+          status: 200,
+        },
+      ),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(getSeasonMode({ token: "access-token" })).resolves.toEqual({
+      nextExamSchedule: {
+        daysUntil: 7,
+        examDate: "2026-05-10",
+        examScheduleId: "exam-next",
+        examType: "NAESIN",
+        seasonMode: "NAESIN_INTENSIVE",
+        subject: "수학",
+        title: "중간고사",
+      },
+      seasonMode: "NAESIN_INTENSIVE",
+    });
+
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      1,
+      "http://localhost:8080/exam-schedules/season-mode",
+      expect.objectContaining({ method: "GET" }),
+    );
+
+    const request = fetchMock.mock.calls[0]?.[1] as RequestInit;
+    expect(new Headers(request.headers).get("Authorization")).toBe(
+      "Bearer access-token",
+    );
   });
 });
