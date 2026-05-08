@@ -5,6 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host 127.0.0.1",
+    "dev:visual": "vite --host 127.0.0.1 --port 5175 --mode visual --strictPort",
+    "mock:visual": "node scripts/visual-mock-api.cjs",
+    "smoke:visual": "node scripts/visual-smoke.cjs",
     "build": "tsc -b && vite build",
     "typecheck": "tsc -b --pretty false",
     "lint": "eslint .",
