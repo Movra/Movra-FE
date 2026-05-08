@@ -644,6 +644,40 @@
   background: var(--color-success-soft);
 }
 
+.tinyWinPrompt {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0 0 14px;
+  padding: 12px 14px;
+  border: 1px solid var(--color-primary-pale);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.86);
+}
+
+.tinyWinPrompt a {
+  color: var(--color-primary-active);
+  font-size: var(--font-size-body-sm);
+  text-decoration: none;
+}
+
+.tinyWinPrompt a:hover,
+.tinyWinPrompt a:focus-visible {
+  text-decoration: underline;
+}
+
+.tinyWinPrompt button {
+  min-height: 32px;
+  padding: 0 12px;
+  border: 1px solid var(--color-hairline-soft);
+  border-radius: var(--radius-pill);
+  color: var(--color-body);
+  background: #ffffff;
+  font-size: var(--font-size-caption);
+  cursor: pointer;
+}
+
 .centerState {
   display: grid;
   min-height: 100vh;

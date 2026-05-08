@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type FormEvent, useEffect, useMemo, useState } from "react";
-import { Navigate } from "react-router-dom";
+import { Link, Navigate } from "react-router-dom";
 
 import characterDefault from "../assets/auth/character-default.png";
 import characterFocus from "../assets/auth/character-focus.png";
@@ -186,6 +186,7 @@ export function FocusPage() {
   const [recoveryModalOpen, setRecoveryModalOpen] = useState(false);
   const [recoveryFormOpen, setRecoveryFormOpen] = useState(false);
   const [recoveryDismissed, setRecoveryDismissed] = useState(false);
+  const [showTinyWinPrompt, setShowTinyWinPrompt] = useState(false);
   const [recoveryForm, setRecoveryForm] = useState<RecoveryReflectionForm>({
     ifCondition: "",
     thenAction: "",
@@ -299,6 +300,7 @@ export function FocusPage() {
       setSelectedFocusMode(session.presetMinutes);
       setActionError(null);
       setActionNotice("집중 세션을 시작했습니다.");
+      setShowTinyWinPrompt(false);
       await refreshFocusData();
     },
   });
@@ -315,6 +317,7 @@ export function FocusPage() {
       setTimerOffsetSeconds(0);
       setTimerPaused(false);
       setTimerPausedSeconds(null);
+      setShowTinyWinPrompt(true);
       await refreshFocusData();
     },
   });
@@ -599,6 +602,19 @@ export function FocusPage() {
           <p className={styles.success} role="status">
             {actionNotice}
           </p>
+        ) : null}
+        {showTinyWinPrompt ? (
+          <div className={styles.tinyWinPrompt}>
+            <Link to="/reflection?focus=new">
+              방금 집중을 잘 끝냈어요. 작은 성취 남기기 →
+            </Link>
+            <button
+              onClick={() => setShowTinyWinPrompt(false)}
+              type="button"
+            >
+              닫기
+            </button>
+          </div>
         ) : null}
 
         <main className={styles.focusGrid}>
