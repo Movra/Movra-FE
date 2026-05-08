@@ -4,7 +4,10 @@ import userEvent from "@testing-library/user-event";
 
 import { App } from "../app/App";
 import type { HomeToday, NotificationPreference } from "../features/core-loop/types";
-import type { NotificationPreferenceUpdateRequest } from "../features/notification/types";
+import type {
+  NotificationPreferenceUpdateRequest,
+  WebPushSubscriptionRequest,
+} from "../features/notification/types";
 import { createHomeTodayFixture } from "../test/fixtures";
 import { server } from "../test/server";
 
@@ -12,6 +15,9 @@ type SetupSettingsHandlersOptions = {
   initialHome?: HomeToday;
   initialPreference?: NotificationPreference;
   failUpdate?: boolean;
+  failVapid?: boolean;
+  failSubscribe?: boolean;
+  vapidPublicKey?: string;
 };
 
 function authenticate(path = "/settings") {
@@ -40,9 +46,13 @@ function setupSettingsHandlers({
   initialHome = createHomeTodayFixture(),
   initialPreference = defaultPreference(),
   failUpdate = false,
+  failVapid = false,
+  failSubscribe = false,
+  vapidPublicKey = "AQAB",
 }: SetupSettingsHandlersOptions = {}) {
   let preference = initialPreference;
   const updates: NotificationPreferenceUpdateRequest[] = [];
+  const subscribeCalls: WebPushSubscriptionRequest[] = [];
 
   server.use(
     http.get("http://localhost:8080/home/today", () =>
@@ -73,11 +83,147 @@ function setupSettingsHandlers({
         return HttpResponse.json(preference);
       },
     ),
+    http.get("http://localhost:8080/web-push/vapid-public-key", () => {
+      if (failVapid) {
+        return HttpResponse.json(
+          { message: "VAPID 키 조회 실패", statusCode: 500 },
+          { status: 500 },
+        );
+      }
+      return HttpResponse.json({ publicKey: vapidPublicKey });
+    }),
+    http.post(
+      "http://localhost:8080/web-push/subscribe",
+      async ({ request }) => {
+        const body = (await request.json()) as WebPushSubscriptionRequest;
+        if (failSubscribe) {
+          return HttpResponse.json(
+            {
+              message: "INVALID_WEB_PUSH_SUBSCRIPTION",
+              statusCode: 400,
+            },
+            { status: 400 },
+          );
+        }
+        subscribeCalls.push(body);
+        return HttpResponse.json({
+          contentEncoding: body.contentEncoding,
+          createdAt: "2026-04-24T01:00:00Z",
+          endpoint: body.endpoint,
+          lastRegisteredAt: "2026-04-24T01:00:00Z",
+          webPushSubscriptionId: "sub-id",
+        });
+      },
+    ),
   );
 
   return {
+    getSubscribeCalls: () => subscribeCalls,
     getUpdates: () => updates,
   };
+}
+
+type StubSubscriptionShape = {
+  endpoint: string;
+  toJSON: () => {
+    endpoint: string;
+    keys: { p256dh: string; auth: string };
+  };
+};
+
+type WebPushMockOptions = {
+  permission?: NotificationPermission;
+  existingSubscription?: StubSubscriptionShape | null;
+  serviceWorkerSupported?: boolean;
+  notificationSupported?: boolean;
+  pushManagerSupported?: boolean;
+};
+
+const defaultStubSubscription: StubSubscriptionShape = {
+  endpoint: "https://push.example.com/abc",
+  toJSON: () => ({
+    endpoint: "https://push.example.com/abc",
+    keys: { auth: "fake-auth", p256dh: "fake-p256dh" },
+  }),
+};
+
+function setupWebPushMocks({
+  permission = "default",
+  existingSubscription = null,
+  serviceWorkerSupported = true,
+  notificationSupported = true,
+  pushManagerSupported = true,
+}: WebPushMockOptions = {}) {
+  const subscribeMock = vi.fn().mockResolvedValue(defaultStubSubscription);
+  const getSubscriptionMock = vi
+    .fn()
+    .mockResolvedValue(existingSubscription);
+  const registration = {
+    pushManager: {
+      getSubscription: getSubscriptionMock,
+      subscribe: subscribeMock,
+    },
+  };
+  const registerMock = vi.fn().mockResolvedValue(registration);
+
+  if (notificationSupported) {
+    vi.stubGlobal("Notification", {
+      permission,
+      requestPermission: vi.fn().mockResolvedValue("granted"),
+    });
+  } else {
+    // remove Notification from window
+    Object.defineProperty(window, "Notification", {
+      configurable: true,
+      value: undefined,
+    });
+  }
+
+  if (serviceWorkerSupported) {
+    Object.defineProperty(navigator, "serviceWorker", {
+      configurable: true,
+      value: {
+        ready: Promise.resolve(registration),
+        register: registerMock,
+      },
+    });
+  } else {
+    Object.defineProperty(navigator, "serviceWorker", {
+      configurable: true,
+      value: undefined,
+    });
+  }
+
+  if (pushManagerSupported) {
+    vi.stubGlobal("PushManager", function PushManager() {});
+  } else {
+    Object.defineProperty(window, "PushManager", {
+      configurable: true,
+      value: undefined,
+    });
+  }
+
+  return {
+    getSubscriptionMock,
+    registerMock,
+    subscribeMock,
+  };
+}
+
+function teardownWebPushMocks() {
+  vi.unstubAllGlobals();
+  Object.defineProperty(navigator, "serviceWorker", {
+    configurable: true,
+    value: undefined,
+  });
+  Object.defineProperty(window, "PushManager", {
+    configurable: true,
+    value: undefined,
+  });
+  Object.defineProperty(window, "Notification", {
+    configurable: true,
+    value: undefined,
+  });
 }
 
 describe("SettingsPage notification section", () => {
@@ -319,6 +465,152 @@ describe("SettingsPage notification section", () => {
 
     expect(
       await screen.findByText("잘못된 알림 설정입니다."),
+    ).toBeInTheDocument();
+  });
+});
+
+describe("SettingsPage web push section", () => {
+  afterEach(() => {
+    teardownWebPushMocks();
+  });
+
+  it("disables button and explains when browser does not support Web Push", async () => {
+    setupSettingsHandlers();
+    setupWebPushMocks({ notificationSupported: false });
+    authenticate();
+
+    render(<App />);
+
+    await waitFor(() =>
+      expect(
+        screen.getByText("이 브라우저에서는 Web Push를 사용할 수 없습니다."),
+      ).toBeInTheDocument(),
+    );
+  });
+
+  it("disables button when permission is denied", async () => {
+    setupSettingsHandlers();
+    setupWebPushMocks({ permission: "denied" });
+    authenticate();
+
+    render(<App />);
+
+    await waitFor(() =>
+      expect(
+        screen.getByText("브라우저 설정에서 알림 권한을 허용해 주세요."),
+      ).toBeInTheDocument(),
+    );
+
+    expect(
+      screen.getByRole("button", { name: "Web Push 알림 받기" }),
+    ).toBeDisabled();
+  });
+
+  it("requests permission and registers a Web Push subscription on click", async () => {
+    const user = userEvent.setup();
+    const handlers = setupSettingsHandlers();
+    const mocks = setupWebPushMocks({ permission: "default" });
+    authenticate();
+
+    render(<App />);
+
+    const button = await screen.findByRole("button", {
+      name: "Web Push 알림 받기",
+    });
+    await user.click(button);
+
+    await waitFor(() => expect(mocks.registerMock).toHaveBeenCalled());
+    expect(mocks.registerMock).toHaveBeenCalledWith("/sw.js", { scope: "/" });
+    expect(mocks.subscribeMock).toHaveBeenCalledWith(
+      expect.objectContaining({ userVisibleOnly: true }),
+    );
+
+    await waitFor(() =>
+      expect(handlers.getSubscribeCalls()).toEqual([
+        {
+          contentEncoding: "aes128gcm",
+          endpoint: "https://push.example.com/abc",
+          keys: { auth: "fake-auth", p256dh: "fake-p256dh" },
+          userAgent: navigator.userAgent,
+        },
+      ]),
+    );
+
+    expect(
+      window.localStorage.getItem("movra:webPushEndpoint"),
+    ).toBe("https://push.example.com/abc");
+  });
+
+  it("registers subscription when permission already granted and no existing subscription", async () => {
+    const user = userEvent.setup();
+    const handlers = setupSettingsHandlers();
+    setupWebPushMocks({ permission: "granted", existingSubscription: null });
+    authenticate();
+
+    render(<App />);
+
+    const button = await screen.findByRole("button", {
+      name: "Web Push 알림 받기",
+    });
+    await user.click(button);
+
+    await waitFor(() =>
+      expect(handlers.getSubscribeCalls()).toHaveLength(1),
+    );
+  });
+
+  it("shows '다시 등록' label when permission granted and stored endpoint matches existing subscription", async () => {
+    setupSettingsHandlers();
+    window.localStorage.setItem(
+      "movra:webPushEndpoint",
+      "https://push.example.com/abc",
+    );
+    setupWebPushMocks({
+      existingSubscription: defaultStubSubscription,
+      permission: "granted",
+    });
+    authenticate();
+
+    render(<App />);
+
+    expect(
+      await screen.findByRole("button", { name: "다시 등록" }),
+    ).toBeInTheDocument();
+  });
+
+  it("surfaces an error when VAPID GET fails", async () => {
+    const user = userEvent.setup();
+    setupSettingsHandlers({ failVapid: true });
+    setupWebPushMocks({ permission: "default" });
+    authenticate();
+
+    render(<App />);
+
+    const button = await screen.findByRole("button", {
+      name: "Web Push 알림 받기",
+    });
+    await user.click(button);
+
+    expect(
+      await screen.findByText(/VAPID 키 조회 실패/),
+    ).toBeInTheDocument();
+  });
+
+  it("surfaces an error when subscribe POST returns 400", async () => {
+    const user = userEvent.setup();
+    setupSettingsHandlers({ failSubscribe: true });
+    setupWebPushMocks({ permission: "default" });
+    authenticate();
+
+    render(<App />);
+
+    const button = await screen.findByRole("button", {
+      name: "Web Push 알림 받기",
+    });
+    await user.click(button);
+
+    expect(
+      await screen.findByText(/INVALID_WEB_PUSH_SUBSCRIPTION/),
     ).toBeInTheDocument();
   });
 });
