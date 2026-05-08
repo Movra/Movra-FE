@@ -140,6 +140,35 @@ describe("feedback api", () => {
       "Bearer access-token",
     );
   });
+
+  it("propagates a Daily Reflection 409 conflict via ApiClientError", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          message: "이미 오늘 회고가 있습니다.",
+          statusCode: 409,
+        }),
+        {
+          headers: { "Content-Type": "application/json" },
+          status: 409,
+        },
+      ),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const promise = createDailyReflection({
+      token: "access-token",
+      values: {
+        ifCondition: "휴대폰이 눈에 들어오면",
+        reflectionDate: "2026-04-24",
+        thenAction: "책상 밖에 두고 3분 타이머를 켠다",
+        whatBrokeDown: "점심 이후 휴대폰을 오래 봤다",
+        whatWentWell: "다시 돌아와 기록을 남겼다",
+      },
+    });
+    await expect(promise).rejects.toBeInstanceOf(ApiClientError);
+    await expect(promise).rejects.toMatchObject({ status: 409 });
+  });
 });
 
 describe("tiny win api", () => {
