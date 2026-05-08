@@ -486,6 +486,57 @@ describe("FocusPage", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("renders post-exam fields in the recovery modal when postExamMode is on", async () => {
+    const user = userEvent.setup();
+    setupFocusHandlers({
+      recoveryCard: createRecoveryCard({
+        daysSinceRecentExam: 2,
+        needsRecovery: true,
+        postExamMode: true,
+        recentExamDate: "2026-04-22",
+        recentExamScheduleId: "exam-1",
+        recentExamSubject: "수학",
+        recentExamTitle: "중간고사",
+        recentExamType: "NAESIN",
+        recoveryType: "POST_EXAM_RECOVERY",
+        suggestedAction: "시험 직후니 살살 풀어볼까요?",
+        suggestedDurationMinutes: 5,
+      }),
+    });
+    authenticate();
+
+    render(<App />);
+
+    await user.click(await screen.findByRole("button", { name: "카드 열기" }));
+
+    expect(await screen.findByText("중간고사")).toBeInTheDocument();
+    expect(screen.getByText("수학")).toBeInTheDocument();
+    expect(screen.getByText("2026-04-22")).toBeInTheDocument();
+    expect(screen.getByText("2일 전")).toBeInTheDocument();
+  });
+
+  it("does not render post-exam fields when postExamMode is off", async () => {
+    const user = userEvent.setup();
+    setupFocusHandlers({
+      recoveryCard: createRecoveryCard({
+        needsRecovery: true,
+        postExamMode: false,
+        recentExamTitle: "중간고사",
+        recoveryType: "MISSED_FOCUS",
+        suggestedAction: "다시 켜볼까요?",
+        suggestedDurationMinutes: 3,
+      }),
+    });
+    authenticate();
+
+    render(<App />);
+
+    await user.click(await screen.findByRole("button", { name: "카드 열기" }));
+    await screen.findByRole("dialog", { name: "다시 시작하기" });
+
+    expect(screen.queryByText("중간고사")).not.toBeInTheDocument();
+  });
+
   it("does not show Tiny Win link after a continuous focus stop", async () => {
     const user = userEvent.setup();
     setupFocusHandlers();
