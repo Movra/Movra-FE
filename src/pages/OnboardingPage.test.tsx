@@ -1,5 +1,5 @@
 import { HttpResponse, http } from "msw";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { App } from "../app/App";
@@ -8,7 +8,10 @@ import {
   createHomeTodayFixture,
 } from "../test/fixtures";
 import { server } from "../test/server";
-import type { BehaviorProfileRequest } from "../features/onboarding/types";
+import type {
+  BehaviorProfile,
+  BehaviorProfileRequest,
+} from "../features/onboarding/types";
 
 function authenticate(path = "/onboarding") {
   window.localStorage.setItem("movra.accessToken", "access-token");
@@ -124,6 +127,102 @@ describe("OnboardingPage", () => {
       await screen.findByRole("heading", {
         name: "안녕하세요, 김모브라님!",
       }),
+    ).toBeInTheDocument();
+  });
+
+  it("loads existing profile in edit mode and PUTs updates back to /behavior-profiles/me", async () => {
+    const existingProfile: BehaviorProfile = createBehaviorProfileFixture({
+      coachingMode: "STRICT",
+      examTrack: "BOTH",
+      executionDifficulty: "HIGH",
+      preferredFocusEndHour: 22,
+      preferredFocusStartHour: 10,
+      recoveryStyle: "NEEDS_REFLECTION",
+      socialPreference: "HIGH",
+    });
+    const updates: BehaviorProfileRequest[] = [];
+
+    server.use(
+      http.get("http://localhost:8080/auth/onboarding-context", () =>
+        HttpResponse.json({ pendingSchoolHours: false }),
+      ),
+      http.get("http://localhost:8080/home/today", () =>
+        HttpResponse.json(createHomeTodayFixture()),
+      ),
+      http.get("http://localhost:8080/notification/preferences", () =>
+        HttpResponse.json({
+          accountabilityEnabled: false,
+          dailyFocusEnabled: true,
+          dailyTimetableEnabled: true,
+          dailyTopPicksEnabled: true,
+          maxDailyPushCount: 3,
+          notificationPreferenceId: "preference-id",
+          schoolHoursEnd: "15:30",
+          schoolHoursQuietEnabled: true,
+          schoolHoursStart: "08:00",
+          sleepHoursQuietEnabled: true,
+          weekendSchoolQuietEnabled: false,
+        }),
+      ),
+      http.get("http://localhost:8080/behavior-profiles/me", () =>
+        HttpResponse.json(existingProfile),
+      ),
+      http.put(
+        "http://localhost:8080/behavior-profiles/me",
+        async ({ request }) => {
+          updates.push((await request.json()) as BehaviorProfileRequest);
+          return new HttpResponse(null, { status: 200 });
+        },
+      ),
+    );
+    authenticate("/onboarding?mode=edit");
+
+    render(<App />);
+
+    // Step 0 initial heading still shown
+    expect(
+      await screen.findByRole("heading", {
+        name: "지금의 공부 루프를 가볍게 맞춰볼게요.",
+      }),
+    ).toBeInTheDocument();
+
+    // skip button hidden in edit mode
+    expect(
+      screen.queryByRole("button", { name: "건너뛰기" }),
+    ).not.toBeInTheDocument();
+
+    // Walk to last step
+    await userEvent.click(screen.getByRole("button", { name: "다음" }));
+    await userEvent.click(screen.getByRole("button", { name: "다음" }));
+    await userEvent.click(screen.getByRole("button", { name: "다음" }));
+    await userEvent.click(screen.getByRole("button", { name: "다음" }));
+    await userEvent.click(screen.getByRole("button", { name: "다음" }));
+
+    // Final step shows preselected values from existing profile
+    await waitFor(() =>
+      expect(screen.getByLabelText("시작 시간")).toHaveValue("10"),
+    );
+    expect(screen.getByLabelText("종료 시간")).toHaveValue("22");
+
+    await userEvent.click(screen.getByRole("button", { name: "완료" }));
+
+    await waitFor(() =>
+      expect(updates).toEqual([
+        {
+          coachingMode: "STRICT",
+          examTrack: "BOTH",
+          executionDifficulty: "HIGH",
+          preferredFocusEndHour: 22,
+          preferredFocusStartHour: 10,
+          recoveryStyle: "NEEDS_REFLECTION",
+          socialPreference: "HIGH",
+        },
+      ]),
+    );
+
+    // Navigates to /settings
+    expect(
+      await screen.findByRole("heading", { name: "설정" }),
     ).toBeInTheDocument();
   });
 });
