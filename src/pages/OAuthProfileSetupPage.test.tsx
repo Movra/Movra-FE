@@ -56,12 +56,13 @@ describe("OAuthProfileSetupPage", () => {
         name: "안녕하세요, 김모브라님!",
       }),
     ).toBeInTheDocument();
-    expect(window.localStorage.getItem("movra.accessToken")).toBe(
+    expect(window.sessionStorage.getItem("movra.accessToken")).toBe(
       "oauth-access-token",
     );
-    expect(window.localStorage.getItem("movra.refreshToken")).toBe(
+    expect(window.sessionStorage.getItem("movra.refreshToken")).toBe(
       "oauth-refresh-token",
     );
+    expect(window.localStorage.getItem("movra.accessToken")).toBeNull();
     expect(requests).toHaveLength(1);
     expect(requests[0]).toMatchObject({
       accountId: "oauthstudent",

@@ -49,12 +49,13 @@ describe("LoginPage", () => {
         name: "안녕하세요, 김모브라님!",
       }),
     ).toBeInTheDocument();
-    expect(window.localStorage.getItem("movra.accessToken")).toBe(
+    expect(window.sessionStorage.getItem("movra.accessToken")).toBe(
       "access-token",
     );
-    expect(window.localStorage.getItem("movra.refreshToken")).toBe(
+    expect(window.sessionStorage.getItem("movra.refreshToken")).toBe(
       "refresh-token",
     );
+    expect(window.localStorage.getItem("movra.accessToken")).toBeNull();
   });
 
   it("redirects to onboarding after login when behavior profile is missing", async () => {
