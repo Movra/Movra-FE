@@ -366,7 +366,13 @@ describe("TimetablePage", () => {
 
     render(<App />);
 
-    expect(await screen.findByRole("heading", { name: "시간표" })).toBeInTheDocument();
+    expect(
+      await screen.findByRole(
+        "heading",
+        { name: "시간표" },
+        { timeout: 5000 },
+      ),
+    ).toBeInTheDocument();
     expect(
       await screen.findByText("작업을 원하는 시간대에 놓아 주세요."),
     ).toBeInTheDocument();

@@ -3,6 +3,7 @@ import { type FormEvent, useState } from "react";
 import { Navigate } from "react-router-dom";
 
 import characterDefault from "../assets/auth/character-default.png";
+import { recordAnalyticsEventSafely } from "../features/analytics/api";
 import { useAuth } from "../features/auth/useAuth";
 import { AppSidebar } from "../features/core-loop/AppSidebar";
 import { getHomeToday } from "../features/core-loop/api";
@@ -21,6 +22,7 @@ import {
 } from "../features/planning-support/api";
 import { getErrorMessage } from "../shared/api/errors";
 import { queryKeys } from "../shared/queryKeys";
+import { PageHeader } from "../shared/ui/PageHeader";
 import styles from "./ExamSchedulesPage.module.css";
 
 type DialogState =
@@ -121,6 +123,20 @@ function isFormReady(form: ExamScheduleRequest) {
   return Boolean(form.examDate && form.subject.trim() && form.title.trim());
 }
 
+function getDaysToExam(targetDate: string | undefined, examDate: string) {
+  if (!targetDate) {
+    return undefined;
+  }
+
+  const start = Date.parse(`${targetDate}T00:00:00Z`);
+  const end = Date.parse(`${examDate}T00:00:00Z`);
+  if (Number.isNaN(start) || Number.isNaN(end)) {
+    return undefined;
+  }
+
+  return Math.round((end - start) / 86_400_000);
+}
+
 function sortByDistance(left: ExamSchedule, right: ExamSchedule) {
   return left.daysUntil - right.daysUntil;
 }
@@ -166,7 +182,16 @@ export function ExamSchedulesPage() {
       setActionNotice(null);
       setActionError(getErrorMessage(error));
     },
-    onSuccess: async () => {
+    onSuccess: async (_data, values) => {
+      void recordAnalyticsEventSafely({
+        eventType: "EXAM_REGISTERED",
+        properties: {
+          days_to_exam: getDaysToExam(home?.targetDate, values.examDate),
+          exam_type: values.examType,
+          source: "exam_schedules_page",
+        },
+        token,
+      });
       setActionError(null);
       setActionNotice("시험 일정을 추가했습니다.");
       setDialogState(null);
@@ -295,16 +320,22 @@ export function ExamSchedulesPage() {
       />
 
       <div className={styles.contentShell}>
-        <header className={styles.pageHeader}>
-          <div>
-            <p className={styles.kicker}>Exam Schedule</p>
-            <h1 id="exam-schedules-title">시험 일정</h1>
-            <p>다가오는 시험을 확인하고 계획을 세워보세요.</p>
-          </div>
-          <button className={styles.primaryButton} onClick={openCreateDialog} type="button">
-            + 시험 추가
-          </button>
-        </header>
+        <PageHeader
+          className={styles.pageHeader}
+          description="다가오는 시험을 확인하고 계획을 세워보세요."
+          eyebrow="Exam Schedule"
+          title="시험 일정"
+          titleId="exam-schedules-title"
+          actions={
+            <button
+              className={styles.primaryButton}
+              onClick={openCreateDialog}
+              type="button"
+            >
+              + 시험 추가
+            </button>
+          }
+        />
 
         {actionError ? (
           <p className={styles.error} role="alert">

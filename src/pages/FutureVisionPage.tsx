@@ -10,6 +10,7 @@ import {
 import { Navigate } from "react-router-dom";
 
 import characterDefault from "../assets/auth/character-default.png";
+import { recordAnalyticsEventSafely } from "../features/analytics/api";
 import { useAuth } from "../features/auth/useAuth";
 import { AppSidebar } from "../features/core-loop/AppSidebar";
 import { getHomeToday } from "../features/core-loop/api";
@@ -25,6 +26,7 @@ import {
 import { getErrorMessage } from "../shared/api/errors";
 import { validateImageFile } from "../shared/file/imageValidation";
 import { queryKeys } from "../shared/queryKeys";
+import { PageHeader } from "../shared/ui/PageHeader";
 import styles from "./FutureVisionPage.module.css";
 
 type VisionTab = "yearly" | "weekly";
@@ -391,6 +393,14 @@ export function FutureVisionPage() {
       setActionError(getErrorMessage(error));
     },
     onSuccess: async () => {
+      void recordAnalyticsEventSafely({
+        eventType: "FUTURE_VISION_CREATED",
+        properties: {
+          content_length: yearlyVisionDescription.trim().length,
+          source: "future_vision_page",
+        },
+        token,
+      });
       setActionError(null);
       setActionNotice("Future Vision을 저장했습니다.");
       setDirtyState({ weekly: false, yearly: false });
@@ -490,6 +500,47 @@ export function FutureVisionPage() {
     (activeTab === "weekly" || Boolean(yearlyVisionDescription.trim())) &&
     !updateWeeklyMutation.isPending &&
     !updateYearlyMutation.isPending;
+  const activeImage =
+    visionImages[activeTab] ??
+    (activeTab === "yearly"
+      ? futureVision?.yearlyVisionImageUrl
+      : futureVision?.weeklyVisionImageUrl) ??
+    null;
+  const completionItems = [
+    {
+      complete: dirtyState.yearly || Boolean(futureVision?.yearlyVisionImageUrl),
+      detail: dirtyState.yearly
+        ? "새 이미지 준비됨"
+        : futureVision
+          ? "저장된 이미지 있음"
+          : "그림 또는 업로드 필요",
+      label: "연간 목표 이미지",
+    },
+    {
+      complete: dirtyState.weekly || Boolean(futureVision?.weeklyVisionImageUrl),
+      detail: dirtyState.weekly
+        ? "새 이미지 준비됨"
+        : futureVision
+          ? "저장된 이미지 있음"
+          : "그림 또는 업로드 필요",
+      label: "주간 목표 이미지",
+    },
+    {
+      complete: Boolean(yearlyVisionDescription.trim()),
+      detail: yearlyVisionDescription.trim()
+        ? "설명 입력됨"
+        : "100자 안에 입력 필요",
+      label: "연간 목표 설명",
+    },
+  ];
+  const createHelpText = canCreateVision
+    ? "필수 항목이 모두 준비됐습니다."
+    : "연간 이미지, 주간 이미지, 연간 목표 설명을 모두 채워야 저장할 수 있습니다.";
+  const updateHelpText = canUpdateActive
+    ? "현재 편집 중인 목표를 저장할 수 있습니다."
+    : activeTab === "yearly" && !yearlyVisionDescription.trim()
+      ? "연간 목표 설명을 입력한 뒤 저장할 수 있습니다."
+      : "현재 목표 이미지를 새로 그리거나 업로드하면 저장할 수 있습니다.";
 
   return (
     <section className={styles.page} aria-labelledby="future-vision-title">
@@ -500,18 +551,41 @@ export function FutureVisionPage() {
       />
 
       <div className={styles.contentShell}>
-        <header className={styles.pageHeader}>
-          <div>
-            <p className={styles.kicker}>Future Vision</p>
-            <h1 id="future-vision-title">내가 꿈꾸는 미래를 그려보세요.</h1>
-            <p>생각하는 미래는 방향이 되고, 기록하는 순간 현실이 되기 시작해요.</p>
-          </div>
-          {futureVision ? (
-            <span className={styles.savedBadge}>저장된 Vision 있음</span>
-          ) : (
-            <span className={styles.savedBadge}>첫 Vision 작성 중</span>
-          )}
-        </header>
+        <div className={styles.headerStack}>
+          <PageHeader
+            className={styles.pageHeader}
+            description="연간 목표와 이번 주 목표를 이미지로 남겨 홈에서 계속 확인합니다."
+            eyebrow="Future Vision"
+            title="내가 꿈꾸는 미래를 그려보세요."
+            titleId="future-vision-title"
+            actions={
+              futureVision ? (
+                <span className={styles.savedBadge}>저장된 Vision 있음</span>
+              ) : (
+                <span className={styles.savedBadge}>첫 Vision 작성 중</span>
+              )
+            }
+          />
+
+          <section className={styles.progressPanel} aria-label="Vision 완성 상태">
+            {completionItems.map((item) => (
+              <div
+                className={
+                  item.complete
+                    ? styles.progressItemComplete
+                    : styles.progressItem
+                }
+                key={item.label}
+              >
+                <span className={styles.statusMark} aria-hidden="true" />
+                <div>
+                  <strong>{item.label}</strong>
+                  <small>{item.detail}</small>
+                </div>
+              </div>
+            ))}
+          </section>
+        </div>
 
         {actionError ? (
           <p className={styles.error} role="alert">
@@ -526,26 +600,31 @@ export function FutureVisionPage() {
 
         <main className={styles.visionGrid}>
           <section className={styles.editorPanel} aria-labelledby="canvas-title">
-            <div className={styles.tabList} role="tablist" aria-label="Vision 종류">
-              {visionTabs.map((tab) => (
-                <button
-                  aria-selected={activeTab === tab.value}
-                  className={
-                    activeTab === tab.value ? styles.activeTab : styles.tabButton
-                  }
-                  key={tab.value}
-                  onClick={() => setTab(tab.value)}
-                  role="tab"
-                  type="button"
-                >
-                  {tab.label}
-                </button>
-              ))}
+            <div className={styles.editorTopBar}>
+              <div className={styles.tabList} role="tablist" aria-label="Vision 종류">
+                {visionTabs.map((tab) => (
+                  <button
+                    aria-selected={activeTab === tab.value}
+                    className={
+                      activeTab === tab.value ? styles.activeTab : styles.tabButton
+                    }
+                    key={tab.value}
+                    onClick={() => setTab(tab.value)}
+                    role="tab"
+                    type="button"
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+              <span className={styles.editingBadge}>
+                {dirtyState[activeTab] ? "새 변경 사항 있음" : "새 이미지 대기 중"}
+              </span>
             </div>
 
             <div className={styles.canvasHeader}>
               <div>
-                <h2 id="canvas-title">{activeTabInfo.label}</h2>
+                <h2 id="canvas-title">{activeTabInfo.label} 이미지 만들기</h2>
                 <p>{activeTabInfo.helper}</p>
               </div>
               <div className={styles.toolGroup} aria-label="그림 도구">
@@ -571,6 +650,10 @@ export function FutureVisionPage() {
             </div>
 
             <div className={styles.toolbar}>
+              <label className={styles.uploadButton}>
+                이미지 불러오기
+                <input accept="image/*" onChange={handleImageUpload} type="file" />
+              </label>
               <div className={styles.swatches} aria-label="색상 선택">
                 {colorOptions.map((option) => (
                   <button
@@ -594,10 +677,6 @@ export function FutureVisionPage() {
                   value={brushSize}
                 />
                 <span>{brushSize}px</span>
-              </label>
-              <label className={styles.uploadButton}>
-                이미지 불러오기
-                <input accept="image/*" onChange={handleImageUpload} type="file" />
               </label>
               <button
                 className={styles.secondaryButton}
@@ -633,8 +712,40 @@ export function FutureVisionPage() {
           </section>
 
           <aside className={styles.sidePanel} aria-label="Vision 저장 정보">
+            <section className={styles.homePreviewCard}>
+              <div className={styles.cardTitleRow}>
+                <div>
+                  <span>홈 미리보기</span>
+                  <h2>{activeTabInfo.label}</h2>
+                </div>
+                <small>{activeTab === "weekly" ? "홈 목표 카드" : "연간 기준"}</small>
+              </div>
+              <div className={styles.homePreviewMedia}>
+                {activeImage ? (
+                  <img
+                    alt={
+                      activeTab === "yearly"
+                        ? "현재 연간 목표 미리보기"
+                        : "현재 주간 목표 미리보기"
+                    }
+                    src={activeImage}
+                  />
+                ) : (
+                  <div className={styles.previewPlaceholder}>
+                    그림을 그리거나 이미지를 불러오면 여기에 표시됩니다.
+                  </div>
+                )}
+              </div>
+              <p>
+                {activeTab === "yearly"
+                  ? yearlyVisionDescription ||
+                    "연간 목표 설명을 입력하면 홈에서 목표 문장으로 사용할 수 있습니다."
+                  : "이번 주에 집중할 모습을 이미지로 저장해 홈에서 다시 볼 수 있습니다."}
+              </p>
+            </section>
+
             {futureVision ? (
-              <section className={styles.previewCard}>
+              <section className={styles.savedVisionCard}>
                 <h2>저장된 Future Vision</h2>
                 <div className={styles.previewImages}>
                   <figure>
@@ -652,18 +763,12 @@ export function FutureVisionPage() {
                     <figcaption>주간 목표</figcaption>
                   </figure>
                 </div>
-                <p>{futureVision.yearlyVisionDescription}</p>
               </section>
-            ) : (
-              <section className={styles.previewCard}>
-                <h2>아직 저장된 Vision이 없습니다.</h2>
-                <p>연간 목표와 주간 목표를 모두 그린 뒤 저장하면 홈에서도 볼 수 있어요.</p>
-              </section>
-            )}
+            ) : null}
 
             <form className={styles.savePanel} onSubmit={handleCreateVision}>
-              <label>
-                연간 목표 설명
+              <label className={styles.descriptionField}>
+                <span>연간 목표 설명</span>
                 <textarea
                   maxLength={100}
                   onChange={(event) =>
@@ -673,7 +778,10 @@ export function FutureVisionPage() {
                   value={yearlyVisionDescription}
                 />
               </label>
-              <small>{yearlyVisionDescription.length}/100</small>
+              <div className={styles.saveMeta}>
+                <span>{futureVision ? updateHelpText : createHelpText}</span>
+                <small>{yearlyVisionDescription.length}/100</small>
+              </div>
 
               {futureVision ? (
                 <button

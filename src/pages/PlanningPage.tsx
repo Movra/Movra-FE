@@ -4,6 +4,7 @@ import { Navigate, NavLink } from "react-router-dom";
 
 import characterDefault from "../assets/auth/character-default.png";
 import characterMindSweep from "../assets/auth/character-mindsweep.png";
+import { recordAnalyticsEventSafely } from "../features/analytics/api";
 import { AppSidebar } from "../features/core-loop/AppSidebar";
 import { useAuth } from "../features/auth/useAuth";
 import {
@@ -24,6 +25,7 @@ import { formatTopPickLimit, getTopPickLimit } from "../features/core-loop/topPi
 import type { DailyPlanTask, HomeToday, TopPick } from "../features/core-loop/types";
 import { getErrorMessage } from "../shared/api/errors";
 import { queryKeys } from "../shared/queryKeys";
+import { PageHeader } from "../shared/ui/PageHeader";
 import styles from "./PlanningPage.module.css";
 
 const homeTodayKey = queryKeys.homeToday();
@@ -480,6 +482,15 @@ export function PlanningPage() {
       }),
     onError: handleMutationError,
     onSuccess: async () => {
+      void recordAnalyticsEventSafely({
+        eventType: "TOP_PICK_SELECTED",
+        properties: {
+          duration_preset_min: estimatedMinutes,
+          source: "planning_page",
+          target_date: home?.targetDate,
+        },
+        token,
+      });
       handleMutationNotice("오늘의 TopPick을 선택했습니다.");
       await refreshHome();
     },
@@ -640,26 +651,26 @@ export function PlanningPage() {
 
         {flowStep === "mindSweep" ? (
           <main className={styles.mindStage} aria-labelledby="planning-title">
-            <header className={styles.mindHeader}>
-              <div>
-                <p className={styles.kicker}>Daily Planning</p>
-                <h1 id="planning-title">MindSweep</h1>
-                <span aria-hidden="true" className={styles.titleUnderline} />
-              </div>
-
-              <div className={styles.dateControls} aria-label="오늘 날짜">
-                <span className={styles.todayPill}>
-                  <PlanningIcon type="calendar" />
-                  오늘
-                </span>
-                <time dateTime={home.targetDate}>
-                  {formatDisplayDate(home.targetDate)}
-                </time>
-                <NavLink to="/settings" aria-label="설정">
-                  <PlanningIcon type="settings" />
-                </NavLink>
-              </div>
-            </header>
+            <PageHeader
+              className={styles.mindHeader}
+              eyebrow="Daily Planning"
+              title="MindSweep"
+              titleId="planning-title"
+              actions={
+                <div className={styles.dateControls} aria-label="오늘 날짜">
+                  <span className={styles.todayPill}>
+                    <PlanningIcon type="calendar" />
+                    오늘
+                  </span>
+                  <time dateTime={home.targetDate}>
+                    {formatDisplayDate(home.targetDate)}
+                  </time>
+                  <NavLink to="/settings" aria-label="설정">
+                    <PlanningIcon type="settings" />
+                  </NavLink>
+                </div>
+              }
+            />
 
             <section className={styles.mindIntro} aria-label="MindSweep 안내">
               <h2>
@@ -757,30 +768,36 @@ export function PlanningPage() {
         ) : (
           <main className={styles.topPickStage} aria-labelledby="top-pick-title">
             <section className={styles.topPickCard} aria-labelledby="top-pick-title">
-              <header className={styles.topPickHero}>
-                <button
-                  aria-label="MindSweep로 돌아가기"
-                  className={styles.backButton}
-                  onClick={() => setFlowStep("mindSweep")}
-                  type="button"
-                >
-                  <PlanningIcon type="back" />
-                </button>
-                <button
-                  className={styles.helpButton}
-                  onClick={() =>
-                    handleMutationNotice(topPickHelpText)
-                  }
-                  type="button"
-                >
-                  TopPick이란?
-                </button>
-                <p className={styles.kicker}>Daily Planning</p>
-                <h1 id="top-pick-title">
-                  오늘의 TopPick <strong>{topPickLimitText}</strong>를 선택해 주세요
-                </h1>
-                <p>{topPickIntroText}</p>
-              </header>
+              <PageHeader
+                className={styles.topPickHero}
+                description={topPickIntroText}
+                eyebrow="Daily Planning"
+                title={
+                  <>
+                    오늘의 TopPick <strong>{topPickLimitText}</strong>를 선택해 주세요.
+                  </>
+                }
+                titleId="top-pick-title"
+                actions={
+                  <>
+                    <button
+                      aria-label="MindSweep로 돌아가기"
+                      className={styles.backButton}
+                      onClick={() => setFlowStep("mindSweep")}
+                      type="button"
+                    >
+                      <PlanningIcon type="back" />
+                    </button>
+                    <button
+                      className={styles.helpButton}
+                      onClick={() => handleMutationNotice(topPickHelpText)}
+                      type="button"
+                    >
+                      TopPick이란?
+                    </button>
+                  </>
+                }
+              />
 
               <form className={styles.topPickForm} onSubmit={handleSubmitTopPick}>
                 <div className={styles.topPickColumns}>

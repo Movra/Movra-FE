@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Navigate, useNavigate, useSearchParams } from "react-router-dom";
 
 import characterDefault from "../assets/auth/character-default.png";
@@ -9,6 +9,7 @@ import characterSuccess from "../assets/auth/character-success.png";
 import characterTopPick from "../assets/auth/character-toppick.png";
 import movraLogo from "../assets/auth/movra-logo-cropped.png";
 import { ApiClientError } from "../shared/api/client";
+import { recordAnalyticsEventSafely } from "../features/analytics/api";
 import { useAuth } from "../features/auth/useAuth";
 import {
   createBehaviorProfile,
@@ -261,6 +262,7 @@ export function OnboardingPage() {
   const [profile, setProfile] = useState<BehaviorProfileRequest>(defaultProfile);
   const [statusChoiceId, setStatusChoiceId] = useState("growing");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const onboardingStartedRecordedRef = useRef(false);
 
   const onboardingContextQuery = useQuery({
     queryFn: getOnboardingContext,
@@ -292,8 +294,26 @@ export function OnboardingPage() {
     });
   }, [behaviorProfileQuery.data, isEditMode]);
 
+  useEffect(() => {
+    if (isEditMode || !token || onboardingStartedRecordedRef.current) {
+      return;
+    }
+
+    onboardingStartedRecordedRef.current = true;
+    void recordAnalyticsEventSafely({
+      eventType: "ONBOARDING_STARTED",
+      properties: { source: "onboarding_page" },
+      token,
+    });
+  }, [isEditMode, token]);
+
   const createProfileMutation = useMutation({
-    mutationFn: (values: BehaviorProfileRequest) =>
+    mutationFn: ({
+      values,
+    }: {
+      source: "completed" | "skipped";
+      values: BehaviorProfileRequest;
+    }) =>
       createBehaviorProfile({ token, values }),
     onError: (error) => {
       if (error instanceof ApiClientError && error.status === 409) {
@@ -304,7 +324,25 @@ export function OnboardingPage() {
 
       setErrorMessage(getErrorMessage(error));
     },
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
+      if (variables.source === "skipped") {
+        void recordAnalyticsEventSafely({
+          eventType: "ONBOARDING_SKIPPED",
+          properties: { at_question: stepIndex + 1, source: "onboarding_page" },
+          token,
+        });
+      }
+
+      void recordAnalyticsEventSafely({
+        eventType: "BEHAVIOR_PROFILE_CREATED",
+        properties: {
+          source:
+            variables.source === "skipped"
+              ? "onboarding_skipped"
+              : "onboarding_completed",
+        },
+        token,
+      });
       queryClient.removeQueries({ queryKey: ["home-today"] });
       navigate("/", { replace: true });
     },
@@ -350,7 +388,7 @@ export function OnboardingPage() {
       updateProfileMutation.mutate(values);
       return;
     }
-    createProfileMutation.mutate(values);
+    createProfileMutation.mutate({ source: "completed", values });
   }
 
   function goNext() {
@@ -367,7 +405,12 @@ export function OnboardingPage() {
   }
 
   function skipOnboarding() {
-    submitProfile(defaultProfile);
+    if (!token) {
+      setErrorMessage("濡쒓렇?몄씠 ?꾩슂?⑸땲??");
+      return;
+    }
+
+    createProfileMutation.mutate({ source: "skipped", values: defaultProfile });
   }
 
   const progressValue = ((stepIndex + 1) / totalSteps) * 100;

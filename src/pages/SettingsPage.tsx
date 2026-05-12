@@ -12,6 +12,7 @@ import type {
 } from "../features/onboarding/types";
 
 import characterDefault from "../assets/auth/character-default.png";
+import { recordAnalyticsEventSafely } from "../features/analytics/api";
 import { useAuth } from "../features/auth/useAuth";
 import { AppSidebar } from "../features/core-loop/AppSidebar";
 import { getHomeToday } from "../features/core-loop/api";
@@ -29,6 +30,7 @@ import type { NotificationPreferenceUpdateRequest } from "../features/notificati
 import { subscribeBrowserToWebPush } from "../features/notification/webPush";
 import { getErrorMessage } from "../shared/api/errors";
 import { queryKeys } from "../shared/queryKeys";
+import { PageHeader } from "../shared/ui/PageHeader";
 import styles from "./SettingsPage.module.css";
 
 const homeTodayKey = queryKeys.homeToday();
@@ -191,7 +193,20 @@ export function SettingsPage() {
       setActionNotice(null);
       setActionError(getErrorMessage(error));
     },
-    onSuccess: (data) => {
+    onSuccess: (data, values) => {
+      if (
+        preference &&
+        preference.schoolHoursQuietEnabled !== values.schoolHoursQuietEnabled
+      ) {
+        void recordAnalyticsEventSafely({
+          eventType: "SCHOOL_HOURS_MUTE_TOGGLED",
+          properties: {
+            enabled: values.schoolHoursQuietEnabled,
+            source: "settings_page",
+          },
+          token,
+        });
+      }
       setActionError(null);
       setActionNotice("알림 설정을 저장했습니다.");
       queryClient.setQueryData(notificationPreferenceKey, data);
@@ -272,6 +287,11 @@ export function SettingsPage() {
       );
       setStoredEndpoint(subscription.endpoint);
       setWebPushExistingMatchesStored(true);
+      void recordAnalyticsEventSafely({
+        eventType: "WEB_PUSH_OPT_IN",
+        properties: { granted: true, source: "settings_page" },
+        token,
+      });
       setActionNotice("Web Push 알림 등록을 완료했어요.");
     } catch (error) {
       setActionError(getErrorMessage(error));
@@ -320,11 +340,13 @@ export function SettingsPage() {
       />
 
       <div className={styles.contentShell}>
-        <header className={styles.pageHeader}>
-          <p className={styles.kicker}>Settings</p>
-          <h1 id="settings-title">설정</h1>
-          <p>알림 정책과 Web Push, 행동 프로필을 한 곳에서 관리해요.</p>
-        </header>
+        <PageHeader
+          className={styles.pageHeader}
+          description="알림 정책과 Web Push, 행동 프로필을 한 곳에서 관리해요."
+          eyebrow="Settings"
+          title="설정"
+          titleId="settings-title"
+        />
 
         {actionError ? (
           <p className={styles.error} role="alert">

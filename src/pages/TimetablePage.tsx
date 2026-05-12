@@ -13,6 +13,7 @@ import {
 import { Navigate, NavLink } from "react-router-dom";
 
 import characterDefault from "../assets/auth/character-default.png";
+import { recordAnalyticsEventSafely } from "../features/analytics/api";
 import { useAuth } from "../features/auth/useAuth";
 import { AppSidebar } from "../features/core-loop/AppSidebar";
 import {
@@ -66,6 +67,7 @@ import {
 } from "../features/planning-support/timetableUtils";
 import { ApiClientError } from "../shared/api/client";
 import { queryKeys } from "../shared/queryKeys";
+import { PageHeader } from "../shared/ui/PageHeader";
 import styles from "./TimetablePage.module.css";
 
 const homeTodayKey = queryKeys.homeToday();
@@ -133,6 +135,10 @@ type RescheduleRequest = {
   slotId: string;
   startTime: string;
 };
+
+function getSlotFormDurationMinutes(form: Pick<SlotForm, "endTime" | "startTime">) {
+  return parseTimeToMinutes(form.endTime) - parseTimeToMinutes(form.startTime);
+}
 
 type OptimisticContext = {
   previousHome?: HomeToday;
@@ -1143,7 +1149,17 @@ export function TimetablePage() {
       rollbackOptimisticUpdate(context);
       handleMutationError(error);
     },
-    onSuccess: async () => {
+    onSuccess: async (_data, form) => {
+      void recordAnalyticsEventSafely({
+        eventType: "TIMETABLE_SLOT_CREATED",
+        properties: {
+          duration_preset_min: getSlotFormDurationMinutes(form),
+          slot_type: "top_pick",
+          source: "timetable_page",
+          target_date: home?.targetDate,
+        },
+        token,
+      });
       handleMutationNotice("TopPick을 시간 블록에 배정했습니다.");
       await refreshTimetable();
     },
@@ -1213,6 +1229,16 @@ export function TimetablePage() {
       handleMutationError(error);
     },
     onSuccess: async (result, form) => {
+      void recordAnalyticsEventSafely({
+        eventType: "TIMETABLE_SLOT_CREATED",
+        properties: {
+          duration_preset_min: getSlotFormDurationMinutes(form),
+          slot_type: result.assignmentType === "topPick" ? "top_pick" : "task",
+          source: "timetable_page",
+          target_date: home?.targetDate,
+        },
+        token,
+      });
       forgetReassignableTask(form.taskId);
       handleMutationNotice(
         result.assignmentType === "topPick"
@@ -1246,7 +1272,18 @@ export function TimetablePage() {
       rollbackOptimisticUpdate(context);
       handleMutationError(error);
     },
-    onSuccess: async () => {
+    onSuccess: async (_data, form) => {
+      void recordAnalyticsEventSafely({
+        eventType: "TIMETABLE_SLOT_CREATED",
+        properties: {
+          content_length: form.content.trim().length,
+          duration_preset_min: getSlotFormDurationMinutes(form),
+          slot_type: "direct",
+          source: "timetable_page",
+          target_date: home?.targetDate,
+        },
+        token,
+      });
       handleMutationNotice("직접 시간 블록을 추가했습니다.");
       await refreshTimetable();
     },
@@ -1954,22 +1991,25 @@ export function TimetablePage() {
           </p>
         ) : null}
 
-        <header className={styles.pageHeader}>
-          <div>
-            <h1 id="timetable-title">시간표</h1>
-            <p>오늘 하루의 시간 블록을 계획해보세요.</p>
-          </div>
-          <div className={styles.headerActions}>
-            <div className={styles.plannedTimeBadge} aria-label="계획된 총 시간">
-              <span>계획된 총 시간</span>
-              <strong>{formatDuration(totalPlannedMinutes)}</strong>
+        <PageHeader
+          className={styles.pageHeader}
+          description="오늘 하루의 시간 블록을 계획해보세요."
+          eyebrow="Timetable"
+          title="시간표"
+          titleId="timetable-title"
+          actions={
+            <div className={styles.headerActions}>
+              <div className={styles.plannedTimeBadge} aria-label="계획된 총 시간">
+                <span>계획된 총 시간</span>
+                <strong>{formatDuration(totalPlannedMinutes)}</strong>
+              </div>
+              <button className={styles.dateButton} type="button">
+                <TimetableIcon type="calendar" />
+                다른 날짜
+              </button>
             </div>
-            <button className={styles.dateButton} type="button">
-              <TimetableIcon type="calendar" />
-              다른 날짜
-            </button>
-          </div>
-        </header>
+          }
+        />
 
         <div className={styles.dateNavigator} aria-label="날짜 이동">
           <button aria-label="이전 날짜" type="button">
