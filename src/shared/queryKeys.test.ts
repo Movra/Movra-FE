@@ -28,5 +28,16 @@ describe("queryKeys", () => {
       "preferences",
     ]);
     expect(queryKeys.behaviorProfileMe()).toEqual(["behavior-profile", "me"]);
+    expect(queryKeys.studyRooms()).toEqual(["study-rooms"]);
+    expect(queryKeys.studyRoom("room-1")).toEqual(["study-rooms", "room-1"]);
+    expect(queryKeys.studyRoomParticipants("room-1")).toEqual([
+      "study-rooms",
+      "room-1",
+      "participants",
+    ]);
+    expect(queryKeys.studyRoomMyParticipations()).toEqual([
+      "study-rooms",
+      "my-participations",
+    ]);
   });
 });

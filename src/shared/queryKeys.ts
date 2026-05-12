@@ -21,6 +21,12 @@ export const queryKeys = {
   notificationPreference: () => ["notification", "preferences"] as const,
   recoveryCard: () => ["focus-sessions", "recovery-card"] as const,
   seasonMode: () => ["exam-schedules", "season-mode"] as const,
+  studyRoom: (roomId: string) => ["study-rooms", roomId] as const,
+  studyRoomMyParticipations: () =>
+    ["study-rooms", "my-participations"] as const,
+  studyRoomParticipants: (roomId: string) =>
+    ["study-rooms", roomId, "participants"] as const,
+  studyRooms: () => ["study-rooms"] as const,
   timetable: (dailyPlanId: string) => ["timetable", dailyPlanId] as const,
   tinyWin: (tinyWinId: string) => ["tiny-wins", tinyWinId] as const,
   tinyWins: () => ["tiny-wins"] as const,
