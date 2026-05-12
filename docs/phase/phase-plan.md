@@ -1,6 +1,6 @@
 # Movrara Frontend Phase Plan
 
-최종 재정리일: 2026-05-06
+최종 재정리일: 2026-05-10
 
 기준 문서:
 - `docs/prd.md`
@@ -446,7 +446,8 @@
 
 ## Phase 10. Analytics Event Boundary
 
-상태: 미구현
+상태: 완료
+완료 기록: `docs/phase/phase-10-analytics-event-boundary.md`
 
 목표:
 - 주요 기능 성공 시 Analytics Event를 남기되, 이벤트 실패가 본 기능을 막지 않는 경계를 만든다.
@@ -529,7 +530,8 @@
 
 ## Phase 12. Focus Statistics And Timing Recommendation
 
-상태: 미구현
+상태: 완료
+완료 기록: `docs/phase/phase-12-focus-statistics-and-timing-recommendation.md`
 
 목표:
 - `/statistics` placeholder를 실제 통계 화면으로 교체하고, 집중 통계와 추천 시간대를 보여준다.
@@ -565,10 +567,11 @@
 
 ## Phase 13. Study Room REST
 
-상태: 미구현
+상태: 완료
+완료 기록: `docs/phase/phase-13-14-study-room-rest-and-chat.md`
 
 목표:
-- `/friends` placeholder를 실제 소셜/스터디룸 화면으로 교체하고, Study Room REST 기능을 구현한다.
+- `/study-room` 실제 소셜/스터디룸 화면을 구현하고, 기존 `/friends` 접근은 `/study-room`으로 redirect한다.
 
 포함 범위:
 - 공개/비공개 방 생성
@@ -580,11 +583,14 @@
 - 참여자 목록 조회
 - 내 참여 현황 조회
 - 참여자 집중/휴식 상태 전환
+- 참여 후 ID 대신 방 이름/사용자 이름 중심으로 표시
+- 집중 시작 후 참여자 집중 타이머 표시
 
 제외 범위:
 - STOMP 채팅
 - Accountability
 - 랭킹, 공개 경쟁, DM
+- 초대 코드만으로 비공개 방에 참여하는 서버 API
 
 명세 근거:
 - API: StudyRoom 8-1~8-10
@@ -605,7 +611,8 @@
 
 ## Phase 14. Study Room Chat
 
-상태: 미구현
+상태: 완료
+완료 기록: `docs/phase/phase-13-14-study-room-rest-and-chat.md`
 
 목표:
 - Study Room의 실시간 채팅을 STOMP 계약에 맞춰 연결한다.
@@ -640,7 +647,9 @@
 
 ## Phase 15. Accountability
 
-상태: 미구현
+상태: 완료
+
+완료 기록: `docs/phase/phase-15-accountability.md`
 
 목표:
 - 친구 감시 기능을 랭킹 없이 동의 기반 요약 조회로 구현한다.
