@@ -6,6 +6,16 @@ export const queryKeys = {
     ["exam-schedules", examScheduleId] as const,
   examSchedules: () => ["exam-schedules"] as const,
   focusSessionsToday: () => ["focus-sessions", "today"] as const,
+  focusStatisticsDaily: (targetDate: string) =>
+    ["focus-statistics", "daily", targetDate] as const,
+  focusStatisticsMonthly: (targetDate: string) =>
+    ["focus-statistics", "monthly", targetDate] as const,
+  focusStatisticsTimeOfDay: (targetDate: string) =>
+    ["focus-statistics", "time-of-day", targetDate] as const,
+  focusStatisticsTimingRecommendation: () =>
+    ["focus-statistics", "timing-recommendation"] as const,
+  focusStatisticsWeekly: (targetDate: string) =>
+    ["focus-statistics", "weekly", targetDate] as const,
   homeToday: () => ["home-today"] as const,
   nextExamSchedule: () => ["exam-schedules", "next"] as const,
   notificationPreference: () => ["notification", "preferences"] as const,
