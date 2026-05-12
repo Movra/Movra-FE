@@ -5,9 +5,14 @@ import {
   createMorningTask,
   deleteMindSweep,
   deleteMorningTask,
+  getRecoveryCard,
   getMindSweeps,
   getTopPicks,
+  getTodayFocusSessions,
+  recordRecoveryCardAction,
   selectTopPick,
+  startFocusSession,
+  stopFocusSession,
   uncompleteMindSweep,
   uncompleteMorningTask,
   unselectTopPick,
@@ -251,6 +256,140 @@ describe("core loop planning api", () => {
       5,
       "http://localhost:8080/morning-tasks/daily-plan-id/morning-1",
       expect.objectContaining({ method: "DELETE" }),
+    );
+  });
+
+  it("calls the documented Focus Session and Recovery Card endpoints", async () => {
+    const activeFocusSession = {
+      elapsedSeconds: 0,
+      endedAt: null,
+      focusSessionId: "focus-session-id",
+      inProgress: true,
+      presetCompletionRate: null,
+      presetMinutes: 5,
+      presetSeconds: 300,
+      recordedElapsedSeconds: null,
+      startedAt: "2026-04-24T01:00:00Z",
+    };
+    const completedFocusSession = {
+      ...activeFocusSession,
+      elapsedSeconds: 300,
+      endedAt: "2026-04-24T01:05:00Z",
+      inProgress: false,
+      presetCompletionRate: 1,
+      recordedElapsedSeconds: 300,
+    };
+    const recoveryCard = {
+      daysSinceLastSession: 3,
+      daysSinceRecentExam: null,
+      needsRecovery: true,
+      postExamMode: false,
+      recentExamDate: null,
+      recentExamScheduleId: null,
+      recentExamSubject: null,
+      recentExamTitle: null,
+      recentExamType: null,
+      recoveryType: "MISSED_FOCUS",
+      suggestedAction: "어제는 쉬어갔어요. 지금 바로 시작해볼까요?",
+      suggestedDurationMinutes: 5,
+      yesterdayFocusSeconds: 0,
+      yesterdayTopPickCompletionRate: 0,
+    };
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            focusing: false,
+            queriedAt: "2026-04-24T03:00:00Z",
+            sessions: [],
+            targetDate: "2026-04-24",
+            totalFocusSeconds: 0,
+          }),
+          {
+            headers: { "content-type": "application/json" },
+            status: 200,
+          },
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify(activeFocusSession), {
+          headers: { "content-type": "application/json" },
+          status: 200,
+        }),
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify(completedFocusSession), {
+          headers: { "content-type": "application/json" },
+          status: 200,
+        }),
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify(recoveryCard), {
+          headers: { "content-type": "application/json" },
+          status: 200,
+        }),
+      )
+      .mockResolvedValueOnce(new Response(null, { status: 204 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(
+      getTodayFocusSessions({ token: "access-token" }),
+    ).resolves.toEqual({
+      focusing: false,
+      queriedAt: "2026-04-24T03:00:00Z",
+      sessions: [],
+      targetDate: "2026-04-24",
+      totalFocusSeconds: 0,
+    });
+    await expect(
+      startFocusSession({ presetMinutes: 5, token: "access-token" }),
+    ).resolves.toEqual(activeFocusSession);
+    await expect(stopFocusSession({ token: "access-token" })).resolves.toEqual(
+      completedFocusSession,
+    );
+    await expect(getRecoveryCard({ token: "access-token" })).resolves.toEqual(
+      recoveryCard,
+    );
+    await expect(
+      recordRecoveryCardAction({ action: "START", token: "access-token" }),
+    ).resolves.toBeUndefined();
+
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      1,
+      "http://localhost:8080/focus-sessions/today",
+      expect.objectContaining({ method: "GET" }),
+    );
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      2,
+      "http://localhost:8080/focus-sessions/start",
+      expect.objectContaining({
+        body: JSON.stringify({ presetMinutes: 5 }),
+        method: "POST",
+      }),
+    );
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      3,
+      "http://localhost:8080/focus-sessions/stop",
+      expect.objectContaining({ method: "PATCH" }),
+    );
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      4,
+      "http://localhost:8080/focus-sessions/recovery-card",
+      expect.objectContaining({ method: "GET" }),
+    );
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      5,
+      "http://localhost:8080/focus-sessions/recovery-card/actions",
+      expect.objectContaining({
+        body: JSON.stringify({ action: "START" }),
+        method: "POST",
+      }),
+    );
+
+    const request = fetchMock.mock.calls[4]?.[1] as RequestInit;
+    expect(new Headers(request.headers).get("Authorization")).toBe(
+      "Bearer access-token",
     );
   });
 });

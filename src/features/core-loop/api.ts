@@ -3,6 +3,7 @@ import type {
   DailyPlanTask,
   FocusSession,
   HomeToday,
+  RecoveryCard,
   RecoveryCardAction,
   TodayFocusSessions,
   TopPick,
@@ -169,6 +170,10 @@ export function uncompleteMorningTask({
 
 export function getTodayFocusSessions({ token }: AuthenticatedRequest) {
   return apiRequest<TodayFocusSessions>("/focus-sessions/today", { token });
+}
+
+export function getRecoveryCard({ token }: AuthenticatedRequest) {
+  return apiRequest<RecoveryCard>("/focus-sessions/recovery-card", { token });
 }
 
 export function startFocusSession({

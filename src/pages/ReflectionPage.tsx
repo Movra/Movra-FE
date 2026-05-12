@@ -9,6 +9,7 @@ import {
 import { Navigate, useSearchParams } from "react-router-dom";
 
 import characterDefault from "../assets/auth/character-default.png";
+import { recordAnalyticsEventSafely } from "../features/analytics/api";
 import { useAuth } from "../features/auth/useAuth";
 import { AppSidebar } from "../features/core-loop/AppSidebar";
 import { getHomeToday } from "../features/core-loop/api";
@@ -30,6 +31,7 @@ import {
 import { ApiClientError } from "../shared/api/client";
 import { getErrorMessage } from "../shared/api/errors";
 import { queryKeys } from "../shared/queryKeys";
+import { PageHeader } from "../shared/ui/PageHeader";
 import styles from "./ReflectionPage.module.css";
 
 type DailyReflectionFormState = {
@@ -90,6 +92,9 @@ export function ReflectionPage() {
   );
   const [tinyWinDialog, setTinyWinDialog] = useState<TinyWinDialogState>(null);
   const [tinyWinForm, setTinyWinForm] = useState<TinyWinFormState>(
+    createEmptyTinyWinForm,
+  );
+  const [quickTinyWinForm, setQuickTinyWinForm] = useState<TinyWinFormState>(
     createEmptyTinyWinForm,
   );
   const [deleteTarget, setDeleteTarget] = useState<TinyWin | null>(null);
@@ -184,6 +189,17 @@ export function ReflectionPage() {
       setActionError(getErrorMessage(error));
     },
     onSuccess: async () => {
+      void recordAnalyticsEventSafely({
+        eventType: "DAILY_REFLECTION_CREATED",
+        properties: {
+          has_if_then: Boolean(
+            reflectionForm.ifCondition.trim() && reflectionForm.thenAction.trim(),
+          ),
+          source: "reflection_page",
+          target_date: targetDate,
+        },
+        token,
+      });
       setActionError(null);
       setConflictDetected(false);
       setActionNotice("회고를 저장했습니다.");
@@ -232,10 +248,21 @@ export function ReflectionPage() {
       setActionNotice(null);
       setActionError(getErrorMessage(error));
     },
-    onSuccess: async () => {
+    onSuccess: async (_data, values) => {
+      void recordAnalyticsEventSafely({
+        eventType: "TINY_WIN_CREATED",
+        properties: {
+          content_length: values.content.trim().length,
+          source: "reflection_page",
+          target_date: targetDate,
+        },
+        token,
+      });
       setActionError(null);
       setActionNotice("작은 성취를 추가했습니다.");
       setTinyWinDialog(null);
+      setTinyWinForm(createEmptyTinyWinForm());
+      setQuickTinyWinForm(createEmptyTinyWinForm());
       await queryClient.invalidateQueries({ queryKey: tinyWinsKey });
     },
   });
@@ -340,6 +367,13 @@ export function ReflectionPage() {
     setTinyWinForm((current) => ({ ...current, [field]: value }));
   }
 
+  function updateQuickTinyWinField<K extends keyof TinyWinFormState>(
+    field: K,
+    value: TinyWinFormState[K],
+  ) {
+    setQuickTinyWinForm((current) => ({ ...current, [field]: value }));
+  }
+
   function isReflectionFormReady() {
     return (
       reflectionForm.ifCondition.trim() !== "" &&
@@ -405,12 +439,40 @@ export function ReflectionPage() {
     });
   }
 
+  function handleQuickTinyWinSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const trimmedTitle = quickTinyWinForm.title.trim();
+    const trimmedContent = quickTinyWinForm.content.trim();
+
+    if (!trimmedTitle || !trimmedContent) {
+      setActionNotice(null);
+      setActionError("작은 성취의 제목과 내용을 모두 입력해주세요.");
+      return;
+    }
+
+    createTinyWinMutation.mutate({
+      content: trimmedContent,
+      title: trimmedTitle,
+    });
+  }
+
   const reflectionSaving =
     createReflectionMutation.isPending || updateReflectionMutation.isPending;
   const tinyWinSaving =
     createTinyWinMutation.isPending || updateTinyWinMutation.isPending;
   const friendText = getFriendAccountabilityText(home.friendAccountability);
   const profileSubtitle = getNextExamLabel(home);
+  const completedReflectionFieldCount = [
+    reflectionForm.whatWentWell,
+    reflectionForm.whatBrokeDown,
+    reflectionForm.ifCondition,
+    reflectionForm.thenAction,
+  ].filter((value) => value.trim() !== "").length;
+  const reflectionProgress = Math.round((completedReflectionFieldCount / 4) * 100);
+  const todayTinyWins = tinyWins.filter(
+    (tinyWin) => tinyWin.localDate === targetDate,
+  );
+  const visibleTinyWins = todayTinyWins.length > 0 ? todayTinyWins : tinyWins.slice(0, 5);
 
   return (
     <section className={styles.page} aria-labelledby="reflection-title">
@@ -421,20 +483,20 @@ export function ReflectionPage() {
       />
 
       <div className={styles.contentShell}>
-        <header className={styles.pageHeader}>
-          <div>
-            <p className={styles.kicker}>Reflection</p>
-            <h1 id="reflection-title">회고</h1>
-            <p>오늘 잘한 것과 If-Then을 짧게 남기고, 작은 성취도 함께 기록해요.</p>
-          </div>
-          <button
-            className={styles.primaryButton}
-            onClick={openCreateTinyWinDialog}
-            type="button"
-          >
-            + 작은 성취 추가
-          </button>
-        </header>
+        <PageHeader
+          className={styles.pageHeader}
+          description="오늘의 흐름을 정리하고, 다음번에 바로 쓸 행동 하나를 남겨요."
+          eyebrow="Reflection"
+          title="회고"
+          titleId="reflection-title"
+          actions={
+            <div className={styles.headerStatus} aria-label="회고 작성 상태">
+              <span>{savedReflection ? "저장된 회고" : "작성 중인 회고"}</span>
+              <strong>{completedReflectionFieldCount}/4</strong>
+              <small>{reflectionProgress}% 작성</small>
+            </div>
+          }
+        />
 
         {actionError ? (
           <p className={styles.error} role="alert">
@@ -453,11 +515,17 @@ export function ReflectionPage() {
             className={styles.reflectionPanel}
           >
             <div className={styles.panelHeader}>
-              <h2 id="daily-reflection-title">하루 회고</h2>
-              <span>{savedReflection ? "저장됨" : "초안"}</span>
+              <div>
+                <span className={styles.panelEyebrow}>Daily Review</span>
+                <h2 id="daily-reflection-title">오늘 회고</h2>
+              </div>
+              <span className={styles.statusPill}>
+                {savedReflection ? "저장됨" : "초안"}
+              </span>
             </div>
-            <div className={styles.dateRow}>
-              <label className={styles.formField} htmlFor="reflection-date">
+
+            <div className={styles.reflectionMetaBar}>
+              <label className={styles.datePickerField} htmlFor="reflection-date">
                 <span>날짜</span>
                 <input
                   className={styles.dateInput}
@@ -469,6 +537,15 @@ export function ReflectionPage() {
                   value={targetDate}
                 />
               </label>
+              <div className={styles.progressSummary}>
+                <div>
+                  <span>필수 항목</span>
+                  <strong>{completedReflectionFieldCount} / 4</strong>
+                </div>
+                <div className={styles.progressTrack} aria-hidden="true">
+                  <span style={{ width: `${reflectionProgress}%` }} />
+                </div>
+              </div>
             </div>
 
             {dailyReflectionQuery.isLoading ? (
@@ -481,62 +558,100 @@ export function ReflectionPage() {
 
             <form
               aria-label="하루 회고"
+              className={styles.reflectionForm}
+              id="daily-reflection-form"
               onSubmit={handleReflectionSubmit}
             >
-              <div className={styles.formField}>
-                <label htmlFor="what-went-well">오늘 잘한 것</label>
-                <textarea
-                  className={styles.textarea}
-                  id="what-went-well"
-                  maxLength={500}
-                  onChange={(event) =>
-                    updateReflectionField("whatWentWell", event.target.value)
-                  }
-                  placeholder="아침에 계획대로 시작함"
-                  value={reflectionForm.whatWentWell}
-                />
-              </div>
-              <div className={styles.formField}>
-                <label htmlFor="what-broke-down">무너진 지점</label>
-                <textarea
-                  className={styles.textarea}
-                  id="what-broke-down"
-                  maxLength={1000}
-                  onChange={(event) =>
-                    updateReflectionField("whatBrokeDown", event.target.value)
-                  }
-                  placeholder="어디에서 흐름이 끊겼나요?"
-                  value={reflectionForm.whatBrokeDown}
-                />
-              </div>
-              <div className={styles.formField}>
-                <label htmlFor="if-condition">If</label>
-                <textarea
-                  className={styles.textarea}
-                  id="if-condition"
-                  maxLength={500}
-                  onChange={(event) =>
-                    updateReflectionField("ifCondition", event.target.value)
-                  }
-                  placeholder="다음에 이런 상황이면"
-                  value={reflectionForm.ifCondition}
-                />
-              </div>
-              <div className={styles.formField}>
-                <label htmlFor="then-action">Then</label>
-                <textarea
-                  className={styles.textarea}
-                  id="then-action"
-                  maxLength={500}
-                  onChange={(event) =>
-                    updateReflectionField("thenAction", event.target.value)
-                  }
-                  placeholder="이 행동으로 돌아오기"
-                  value={reflectionForm.thenAction}
-                />
-              </div>
+              <section className={styles.reflectionStep}>
+                <div className={styles.stepHeader}>
+                  <span className={styles.stepNumber}>1</span>
+                  <div>
+                    <h3>잘된 흐름 붙잡기</h3>
+                    <p>계속 가져가고 싶은 행동을 한 문장으로 적어요.</p>
+                  </div>
+                </div>
+                <label className={styles.formField} htmlFor="what-went-well">
+                  <span>오늘 잘한 것</span>
+                  <textarea
+                    className={styles.textarea}
+                    id="what-went-well"
+                    maxLength={500}
+                    onChange={(event) =>
+                      updateReflectionField("whatWentWell", event.target.value)
+                    }
+                    placeholder="아침에 계획대로 시작함"
+                    value={reflectionForm.whatWentWell}
+                  />
+                </label>
+              </section>
 
-              <div className={styles.dialogActions}>
+              <section className={styles.reflectionStep}>
+                <div className={styles.stepHeader}>
+                  <span className={styles.stepNumber}>2</span>
+                  <div>
+                    <h3>막힌 지점 확인하기</h3>
+                    <p>비난보다 패턴을 찾는 데 집중해요.</p>
+                  </div>
+                </div>
+                <label className={styles.formField} htmlFor="what-broke-down">
+                  <span>무너진 지점</span>
+                  <textarea
+                    className={styles.textarea}
+                    id="what-broke-down"
+                    maxLength={1000}
+                    onChange={(event) =>
+                      updateReflectionField("whatBrokeDown", event.target.value)
+                    }
+                    placeholder="어디에서 흐름이 끊겼나요?"
+                    value={reflectionForm.whatBrokeDown}
+                  />
+                </label>
+              </section>
+
+              <section className={styles.reflectionStep}>
+                <div className={styles.stepHeader}>
+                  <span className={styles.stepNumber}>3</span>
+                  <div>
+                    <h3>다음 행동 정하기</h3>
+                    <p>상황과 행동을 연결해 다음번 선택을 더 쉽게 만들어요.</p>
+                  </div>
+                </div>
+                <div className={styles.ifThenGrid}>
+                  <label className={styles.formField} htmlFor="if-condition">
+                    <span>If</span>
+                    <textarea
+                      className={styles.textarea}
+                      id="if-condition"
+                      maxLength={500}
+                      onChange={(event) =>
+                        updateReflectionField("ifCondition", event.target.value)
+                      }
+                      placeholder="다음에 이런 상황이면"
+                      value={reflectionForm.ifCondition}
+                    />
+                  </label>
+                  <label className={styles.formField} htmlFor="then-action">
+                    <span>Then</span>
+                    <textarea
+                      className={styles.textarea}
+                      id="then-action"
+                      maxLength={500}
+                      onChange={(event) =>
+                        updateReflectionField("thenAction", event.target.value)
+                      }
+                      placeholder="이 행동으로 돌아오기"
+                      value={reflectionForm.thenAction}
+                    />
+                  </label>
+                </div>
+              </section>
+
+              <div className={styles.formFooter}>
+                <p>
+                  {completedReflectionFieldCount === 4
+                    ? "저장할 준비가 됐습니다."
+                    : "네 칸을 모두 채우면 오늘 회고를 저장할 수 있어요."}
+                </p>
                 <button
                   className={styles.primaryButton}
                   disabled={reflectionSaving}
@@ -564,9 +679,59 @@ export function ReflectionPage() {
             className={styles.tinyWinPanel}
           >
             <div className={styles.panelHeader}>
-              <h2 id="tiny-win-title">작은 성취</h2>
-              <span>{tinyWins.length}개</span>
+              <div>
+                <span className={styles.panelEyebrow}>Tiny Win</span>
+                <h2 id="tiny-win-title">작은 성취</h2>
+              </div>
+              <button
+                className={styles.secondaryButton}
+                onClick={openCreateTinyWinDialog}
+                type="button"
+              >
+                + 작은 성취 추가
+              </button>
             </div>
+
+            <form
+              className={styles.quickTinyWinForm}
+              onSubmit={handleQuickTinyWinSubmit}
+            >
+              <div className={styles.quickFormHeader}>
+                <strong>지금 떠오른 성취</strong>
+                <span>짧게 남겨도 충분해요.</span>
+              </div>
+              <label className={styles.formField}>
+                빠른 제목
+                <input
+                  className={styles.input}
+                  maxLength={30}
+                  onChange={(event) =>
+                    updateQuickTinyWinField("title", event.target.value)
+                  }
+                  placeholder="예: 20분 집중"
+                  value={quickTinyWinForm.title}
+                />
+              </label>
+              <label className={styles.formField}>
+                성취 내용
+                <textarea
+                  className={`${styles.textarea} ${styles.compactTextarea}`}
+                  maxLength={3000}
+                  onChange={(event) =>
+                    updateQuickTinyWinField("content", event.target.value)
+                  }
+                  placeholder="오늘 해낸 일을 한 줄로 적어보세요."
+                  value={quickTinyWinForm.content}
+                />
+              </label>
+              <button
+                className={styles.primaryButton}
+                disabled={createTinyWinMutation.isPending}
+                type="submit"
+              >
+                빠르게 남기기
+              </button>
+            </form>
 
             {tinyWinsQuery.isLoading ? (
               <p>작은 성취 목록을 불러오는 중입니다.</p>
@@ -593,27 +758,35 @@ export function ReflectionPage() {
                 </button>
               </div>
             ) : (
-              <ul className={styles.tinyWinList}>
-                {tinyWins.map((tinyWin) => (
-                  <li key={tinyWin.tinyWinId}>
-                    <button
-                      className={styles.tinyWinItem}
-                      onClick={() => openEditTinyWinDialog(tinyWin)}
-                      type="button"
-                    >
-                      <span className={styles.tinyWinItemHeader}>
-                        <strong>{tinyWin.title}</strong>
-                        <span className={styles.tinyWinItemDate}>
-                          {tinyWin.localDate}
+              <div className={styles.tinyWinHistory}>
+                <div className={styles.tinyWinListHeader}>
+                  <span>
+                    {todayTinyWins.length > 0 ? "오늘 남긴 성취" : "최근 성취"}
+                  </span>
+                  <small>{tinyWins.length}개 기록</small>
+                </div>
+                <ul className={styles.tinyWinList}>
+                  {visibleTinyWins.map((tinyWin) => (
+                    <li key={tinyWin.tinyWinId}>
+                      <button
+                        className={styles.tinyWinItem}
+                        onClick={() => openEditTinyWinDialog(tinyWin)}
+                        type="button"
+                      >
+                        <span className={styles.tinyWinItemHeader}>
+                          <strong>{tinyWin.title}</strong>
+                          <span className={styles.tinyWinItemDate}>
+                            {tinyWin.localDate}
+                          </span>
                         </span>
-                      </span>
-                      <p className={styles.tinyWinItemPreview}>
-                        {tinyWin.content}
-                      </p>
-                    </button>
-                  </li>
-                ))}
-              </ul>
+                        <p className={styles.tinyWinItemPreview}>
+                          {tinyWin.content}
+                        </p>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
             )}
           </section>
         </main>

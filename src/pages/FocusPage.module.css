@@ -1,26 +1,35 @@
 .focusPage {
   display: grid;
+  height: 100vh;
+  height: 100dvh;
   min-height: 100vh;
   min-height: 100dvh;
-  grid-template-columns: minmax(220px, 280px) minmax(0, 1fr);
+  overflow: hidden;
+  grid-template-columns: 232px minmax(0, 1fr);
   color: var(--color-ink);
   background:
-    radial-gradient(circle at 75% 12%, rgba(223, 243, 230, 0.78), transparent 30%),
-    linear-gradient(180deg, var(--color-canvas) 0%, var(--color-canvas-soft) 100%);
+    linear-gradient(135deg, #ffffff 0%, #f9fcf7 54%, #eef6f0 100%);
 }
 
 .contentShell {
+  position: relative;
+  display: grid;
   min-width: 0;
-  padding: 28px;
+  min-height: 0;
+  align-content: start;
+  gap: 16px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding: 30px clamp(28px, 5vw, 58px) 40px;
 }
 
 .topHeader {
   display: flex;
   min-width: 0;
-  align-items: end;
+  align-items: center;
   justify-content: space-between;
   gap: 20px;
-  margin-bottom: 18px;
+  margin: 0;
 }
 
 .topHeader > div:first-child {
@@ -37,9 +46,10 @@
 
 .topHeader h1 {
   margin: 2px 0 4px;
-  font-size: clamp(2rem, 5vw, 4.5rem);
+  color: #14201a;
+  font-size: clamp(1.75rem, 3vw, 2.35rem);
   font-weight: 500;
-  line-height: 1;
+  line-height: 1.12;
 }
 
 .topHeader p {
@@ -50,17 +60,18 @@
 
 .headerStats {
   display: grid;
-  min-width: 230px;
+  min-width: 250px;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
 }
 
 .headerStats article {
   min-width: 0;
-  padding: 14px 16px;
+  padding: 11px 13px;
   border: 1px solid rgba(220, 231, 216, 0.9);
-  border-radius: 16px;
+  border-radius: 12px;
   background: rgba(255, 255, 255, 0.82);
+  box-shadow: 0 10px 24px rgba(31, 42, 33, 0.04);
 }
 
 .headerStats span {
@@ -76,7 +87,7 @@
   display: block;
   overflow: hidden;
   color: var(--color-ink);
-  font-size: 1.4rem;
+  font-size: 1.16rem;
   font-weight: 500;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -85,7 +96,7 @@
 .focusGrid {
   display: grid;
   min-width: 0;
-  grid-template-columns: minmax(0, 1fr) minmax(320px, 420px);
+  grid-template-columns: minmax(420px, 1fr) minmax(304px, 360px);
   gap: 18px;
   align-items: start;
 }
@@ -95,40 +106,30 @@
 .recoveryEntry {
   min-width: 0;
   border: 1px solid rgba(220, 231, 216, 0.92);
-  border-radius: 20px;
+  border-radius: 16px;
   background: rgba(255, 255, 255, 0.9);
 }
 
 .timerStage {
   display: grid;
-  min-height: min(680px, calc(100vh - 160px));
-  min-height: min(680px, calc(100dvh - 160px));
-  align-content: center;
-  justify-items: center;
-  gap: 22px;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 18px;
+  align-content: start;
+  justify-items: stretch;
+  min-height: min(620px, calc(100vh - 158px));
+  min-height: min(620px, calc(100dvh - 158px));
   overflow: hidden;
-  padding: 34px;
-  text-align: center;
-}
-
-.timerCharacter {
-  display: grid;
-  width: min(38vw, 220px);
-  max-width: 100%;
-  aspect-ratio: 1;
-  place-items: center;
-  border-radius: 50%;
-  background: var(--color-primary-pale);
-}
-
-.timerCharacter img {
-  width: 74%;
-  height: 74%;
-  object-fit: contain;
+  padding: 26px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(248, 251, 245, 0.94) 100%);
+  box-shadow: 0 18px 44px rgba(31, 42, 33, 0.06);
+  text-align: left;
 }
 
 .timerCopy {
+  grid-column: 1;
   max-width: 560px;
+  align-self: start;
 }
 
 .readyBadge,
@@ -153,21 +154,27 @@
 }
 
 .timerCopy h2 {
-  margin: 14px 0 8px;
-  font-size: clamp(1.4rem, 3vw, 2.2rem);
+  margin: 12px 0 8px;
+  color: #14201a;
+  font-size: clamp(1.28rem, 2.6vw, 1.92rem);
   font-weight: 500;
-  line-height: 1.18;
+  line-height: 1.2;
 }
 
 .timerCopy p {
   margin: 0;
   color: var(--color-body);
   font-size: var(--font-size-body);
+  line-height: 1.55;
 }
 
 .timerFace {
   display: grid;
+  grid-column: 1 / -1;
   gap: 6px;
+  justify-items: center;
+  padding: 24px 18px 10px;
+  text-align: center;
 }
 
 .timerFace span {
@@ -178,14 +185,16 @@
 .timerFace strong {
   color: var(--color-ink);
   font-family: var(--font-family-mono);
-  font-size: clamp(3.7rem, 10vw, 7.4rem);
+  font-size: clamp(4rem, 10vw, 6.8rem);
   font-weight: 500;
   line-height: 1;
 }
 
 .progressTrack {
+  grid-column: 1 / -1;
+  justify-self: center;
   width: min(100%, 520px);
-  height: 12px;
+  height: 10px;
   overflow: hidden;
   border-radius: var(--radius-pill);
   background: var(--color-surface-strong);
@@ -199,8 +208,14 @@
   transition: width 180ms ease;
 }
 
+.continuousTrack span {
+  background: linear-gradient(90deg, rgba(84, 200, 121, 0.32), rgba(47, 158, 91, 0.18));
+}
+
 .presetGroup {
   display: grid;
+  grid-column: 1 / -1;
+  justify-self: center;
   width: min(100%, 520px);
   grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 8px;
@@ -209,9 +224,9 @@
 .presetButton,
 .selectedPreset {
   min-width: 0;
-  min-height: 42px;
+  min-height: 44px;
   border: 1px solid var(--color-hairline);
-  border-radius: 12px;
+  border-radius: 10px;
   color: var(--color-body);
   background: var(--color-surface-card);
   font-size: var(--font-size-body-sm);
@@ -231,10 +246,12 @@
 }
 
 .primaryAction {
+  grid-column: 1 / -1;
+  justify-self: center;
   width: min(100%, 460px);
   min-height: 56px;
   border: 0;
-  border-radius: var(--radius-pill);
+  border-radius: 12px;
   color: var(--color-on-primary);
   background: var(--color-primary);
   font-size: var(--font-size-title);
@@ -249,6 +266,8 @@
 
 .secondaryTimerActions {
   display: grid;
+  grid-column: 1 / -1;
+  justify-self: center;
   width: min(100%, 460px);
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
@@ -257,7 +276,7 @@
 .secondaryTimerActions button {
   min-height: 42px;
   border: 1px solid var(--color-hairline);
-  border-radius: 12px;
+  border-radius: 10px;
   color: var(--color-ink);
   background: var(--color-surface-card);
   cursor: pointer;
@@ -271,12 +290,14 @@
 .sidePanels {
   display: grid;
   min-width: 0;
+  position: sticky;
+  top: 0;
   gap: 18px;
 }
 
 .recordPanel,
 .recoveryEntry {
-  padding: 22px;
+  padding: 20px;
 }
 
 .panelTitleRow {
@@ -296,12 +317,14 @@
 
 .recoveryEntry {
   display: grid;
-  gap: 12px;
+  grid-template-columns: 64px minmax(0, 1fr);
+  gap: 12px 14px;
+  align-items: center;
 }
 
 .recoveryEntry img {
-  width: 82px;
-  height: 82px;
+  width: 64px;
+  height: 64px;
   object-fit: contain;
 }
 
@@ -322,9 +345,10 @@
 }
 
 .recoveryEntry button {
+  grid-column: 1 / -1;
   min-height: 42px;
   border: 0;
-  border-radius: var(--radius-pill);
+  border-radius: 12px;
   color: var(--color-on-primary);
   background: var(--color-primary);
   cursor: pointer;
@@ -511,38 +535,6 @@
   font-size: var(--font-size-body-sm);
 }
 
-.recoveryPostExam {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
-  margin: 0;
-}
-
-.recoveryPostExam div {
-  min-width: 0;
-  padding: 10px;
-  border-radius: 12px;
-  background: var(--color-primary-pale);
-}
-
-.recoveryPostExam dt,
-.recoveryPostExam dd {
-  overflow: hidden;
-  margin: 0;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.recoveryPostExam dt {
-  color: var(--color-muted);
-  font-size: var(--font-size-caption);
-}
-
-.recoveryPostExam dd {
-  color: var(--color-ink);
-  font-size: var(--font-size-body-sm);
-}
-
 .savedReflection {
   display: grid;
   gap: 12px;
@@ -660,7 +652,7 @@
 
 .error,
 .success {
-  margin: 0 0 14px;
+  margin: 0;
   padding: 12px 14px;
   border-radius: 12px;
   font-size: var(--font-size-body-sm);
@@ -681,7 +673,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin: 0 0 14px;
+  margin: 0;
   padding: 12px 14px;
   border: 1px solid var(--color-primary-pale);
   border-radius: 12px;
@@ -770,6 +762,9 @@
 .primaryAction:focus-visible,
 .secondaryTimerActions button:focus-visible,
 .recoveryEntry button:focus-visible,
+.tinyWinPrompt a:focus-visible,
+.tinyWinPrompt button:focus-visible,
+.recoveryReflectionLink:focus-visible,
 .closeButton:focus-visible,
 .modalActions button:focus-visible,
 .centerState button:focus-visible {
@@ -778,6 +773,10 @@
 }
 
 @media (max-width: 1180px) {
+  .focusPage {
+    grid-template-columns: 206px minmax(0, 1fr);
+  }
+
   .contentShell {
     padding: 22px;
   }
@@ -787,6 +786,7 @@
   }
 
   .sidePanels {
+    position: static;
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
@@ -797,7 +797,15 @@
 
 @media (max-width: 920px) {
   .focusPage {
+    height: auto;
+    min-height: 100vh;
+    min-height: 100dvh;
+    overflow: visible;
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .contentShell {
+    overflow: visible;
   }
 
   .topHeader {
@@ -822,10 +830,6 @@
   .timerStage {
     gap: 18px;
     padding: 24px 18px;
-  }
-
-  .timerCharacter {
-    width: min(58vw, 180px);
   }
 
   .presetGroup {

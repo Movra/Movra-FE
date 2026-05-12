@@ -1,5 +1,5 @@
 import { HttpResponse, http } from "msw";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { App } from "../app/App";
@@ -28,6 +28,7 @@ type SetupFocusHandlersOptions = {
 function authenticate(path = "/focus") {
   window.localStorage.setItem("movra.accessToken", "access-token");
   window.localStorage.setItem("movra.refreshToken", "refresh-token");
+  window.localStorage.removeItem("movra.focus.recoveryDismissedDate");
   window.history.pushState({}, "", path);
 }
 
@@ -239,7 +240,7 @@ describe("FocusPage", () => {
     render(<App />);
 
     expect(
-      await screen.findByRole("heading", { name: "Focus" }),
+      await screen.findByRole("heading", { name: "집중 시간" }),
     ).toBeInTheDocument();
     expect(screen.queryByRole("heading", { name: "기능 미구현" })).toBeNull();
   });
@@ -247,11 +248,16 @@ describe("FocusPage", () => {
   it("starts and stops a focus session from the timer stage", async () => {
     const user = userEvent.setup();
     const handlers = setupFocusHandlers();
+    server.use(
+      http.post("http://localhost:8080/analytics/events", () =>
+        HttpResponse.json({ message: "analytics failed" }, { status: 500 }),
+      ),
+    );
     authenticate();
 
     render(<App />);
 
-    expect(await screen.findByText("00:00")).toBeInTheDocument();
+    expect(await screen.findByText("05:00")).toBeInTheDocument();
     await user.click(await screen.findByRole("button", { name: "10분" }));
     await user.click(screen.getByRole("button", { name: "Focus 시작하기" }));
 
@@ -260,7 +266,7 @@ describe("FocusPage", () => {
     );
     expect(handlers.getStartRequests()).toEqual([10]);
 
-    expect(await screen.findByText("경과 시간")).toBeInTheDocument();
+    expect(await screen.findByText("남은 시간")).toBeInTheDocument();
     await user.click(await screen.findByRole("button", { name: "Focus 멈추기" }));
 
     expect(await screen.findByRole("status")).toHaveTextContent(
@@ -322,7 +328,7 @@ describe("FocusPage", () => {
     render(<App />);
 
     expect(await screen.findAllByText("진행 중")).not.toHaveLength(0);
-    expect(await screen.findByText("02:00")).toBeInTheDocument();
+    expect(await screen.findByText("03:00")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Focus 멈추기" }));
 
     expect(await screen.findByRole("status")).toHaveTextContent(
@@ -433,6 +439,7 @@ describe("FocusPage", () => {
 
   it("starts Recovery Focus from the modal with the suggested preset", async () => {
     const user = userEvent.setup();
+    const analyticsEvents: string[] = [];
     const handlers = setupFocusHandlers({
       recoveryCard: createRecoveryCard({
         needsRecovery: true,
@@ -441,6 +448,19 @@ describe("FocusPage", () => {
         suggestedDurationMinutes: 3,
       }),
     });
+    server.use(
+      http.post("http://localhost:8080/analytics/events", async ({ request }) => {
+        const body = (await request.json()) as { eventType: string };
+        analyticsEvents.push(body.eventType);
+
+        return HttpResponse.json({
+          analyticsEventId: `event-${analyticsEvents.length}`,
+          eventType: body.eventType,
+          occurredAt: "2026-04-24T01:00:00Z",
+          properties: {},
+        });
+      }),
+    );
     authenticate();
 
     render(<App />);
@@ -455,6 +475,52 @@ describe("FocusPage", () => {
     );
     expect(handlers.getRecoveryActions()).toEqual(["START"]);
     expect(handlers.getStartRequests()).toEqual([3]);
+    await waitFor(() =>
+      expect(analyticsEvents).toEqual(
+        expect.arrayContaining([
+          "RECOVERY_CARD_ACTIONED",
+          "FOCUS_SESSION_STARTED",
+        ]),
+      ),
+    );
+  });
+
+  it("keeps Recovery Card hidden after dismissing it for today and refreshing", async () => {
+    const user = userEvent.setup();
+    const handlers = setupFocusHandlers({
+      recoveryCard: createRecoveryCard({
+        needsRecovery: true,
+        recoveryType: "MISSED_FOCUS",
+        suggestedAction: "오늘은 3분만 다시 시작해볼까요?",
+        suggestedDurationMinutes: 3,
+      }),
+    });
+    authenticate();
+
+    const { unmount } = render(<App />);
+
+    await user.click(await screen.findByRole("button", { name: "카드 열기" }));
+    await user.click(screen.getByRole("button", { name: "오늘은 넘기기" }));
+
+    expect(await screen.findByRole("status")).toHaveTextContent(
+      "Recovery Card를 오늘은 넘겨두었습니다.",
+    );
+    expect(handlers.getRecoveryActions()).toEqual(["DISMISS"]);
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("button", { name: "카드 열기" }),
+      ).not.toBeInTheDocument(),
+    );
+
+    unmount();
+    render(<App />);
+
+    await screen.findByRole("heading", { name: "집중 시간" });
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("button", { name: "카드 열기" }),
+      ).not.toBeInTheDocument(),
+    );
   });
 
   it("links to Tiny Win creation after a server preset focus stop", async () => {
@@ -486,7 +552,7 @@ describe("FocusPage", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("renders post-exam fields in the recovery modal when postExamMode is on", async () => {
+  it("does not render post-exam fields in the recovery modal when postExamMode is on", async () => {
     const user = userEvent.setup();
     setupFocusHandlers({
       recoveryCard: createRecoveryCard({
@@ -509,10 +575,12 @@ describe("FocusPage", () => {
 
     await user.click(await screen.findByRole("button", { name: "카드 열기" }));
 
-    expect(await screen.findByText("중간고사")).toBeInTheDocument();
-    expect(screen.getByText("수학")).toBeInTheDocument();
-    expect(screen.getByText("2026-04-22")).toBeInTheDocument();
-    expect(screen.getByText("2일 전")).toBeInTheDocument();
+    await screen.findByRole("dialog", { name: "시험 뒤 회복 루틴" });
+
+    expect(screen.queryByText("중간고사")).not.toBeInTheDocument();
+    expect(screen.queryByText("수학")).not.toBeInTheDocument();
+    expect(screen.queryByText("2026-04-22")).not.toBeInTheDocument();
+    expect(screen.queryByText("2일 전")).not.toBeInTheDocument();
   });
 
   it("does not render post-exam fields when postExamMode is off", async () => {
@@ -574,7 +642,7 @@ describe("FocusPage", () => {
     await user.click(screen.getByRole("button", { name: "다시 시도" }));
 
     expect(
-      await screen.findByRole("heading", { name: "Focus" }),
+      await screen.findByRole("heading", { name: "집중 시간" }),
     ).toBeInTheDocument();
   });
 });

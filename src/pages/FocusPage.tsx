@@ -1,10 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { type FormEvent, useEffect, useMemo, useState } from "react";
+import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { Link, Navigate } from "react-router-dom";
 
 import characterDefault from "../assets/auth/character-default.png";
-import characterFocus from "../assets/auth/character-focus.png";
 import characterRecovery from "../assets/auth/character-recovery.png";
+import { recordAnalyticsEventSafely } from "../features/analytics/api";
 import { useAuth } from "../features/auth/useAuth";
 import { AppSidebar } from "../features/core-loop/AppSidebar";
 import {
@@ -33,12 +33,13 @@ import {
 } from "../features/feedback/api";
 import { getErrorMessage } from "../shared/api/errors";
 import { queryKeys } from "../shared/queryKeys";
+import { PageHeader } from "../shared/ui/PageHeader";
 import styles from "./FocusPage.module.css";
 
 type FocusPreset = 3 | 5 | 10 | 25;
 type FocusMode = FocusPreset | "OPEN";
 type RecoveryActionResult =
-  | { action: "START"; presetMinutes: FocusPreset }
+  | { action: "START"; presetMinutes: FocusPreset; session: FocusSession }
   | { action: "DISMISS" };
 type RecoveryReflectionForm = Pick<
   DailyReflectionRequest,
@@ -50,6 +51,31 @@ const focusModeOptions: FocusMode[] = [...focusPresetOptions, "OPEN"];
 const homeTodayKey = queryKeys.homeToday();
 const focusSessionsTodayKey = queryKeys.focusSessionsToday();
 const recoveryCardKey = queryKeys.recoveryCard();
+const recoveryDismissedDateStorageKey = "movra.focus.recoveryDismissedDate";
+
+function readRecoveryDismissedDate() {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  try {
+    return window.localStorage.getItem(recoveryDismissedDateStorageKey);
+  } catch {
+    return null;
+  }
+}
+
+function writeRecoveryDismissedDate(targetDate: string) {
+  if (!targetDate || typeof window === "undefined") {
+    return;
+  }
+
+  try {
+    window.localStorage.setItem(recoveryDismissedDateStorageKey, targetDate);
+  } catch {
+    // The server-side dismissal still completes even if local storage is unavailable.
+  }
+}
 
 function isFocusPreset(value: number): value is FocusPreset {
   return focusPresetOptions.includes(value as FocusPreset);
@@ -185,7 +211,9 @@ export function FocusPage() {
   const [actionNotice, setActionNotice] = useState<string | null>(null);
   const [recoveryModalOpen, setRecoveryModalOpen] = useState(false);
   const [recoveryFormOpen, setRecoveryFormOpen] = useState(false);
-  const [recoveryDismissed, setRecoveryDismissed] = useState(false);
+  const [dismissedRecoveryDate, setDismissedRecoveryDate] = useState<string | null>(
+    () => readRecoveryDismissedDate(),
+  );
   const [showTinyWinPrompt, setShowTinyWinPrompt] = useState(false);
   const [recoveryForm, setRecoveryForm] = useState<RecoveryReflectionForm>({
     ifCondition: "",
@@ -199,6 +227,7 @@ export function FocusPage() {
   const [timerPausedSeconds, setTimerPausedSeconds] = useState<number | null>(
     null,
   );
+  const recoveryCardViewedRef = useRef(false);
 
   const homeQuery = useQuery({
     enabled: Boolean(token),
@@ -255,15 +284,32 @@ export function FocusPage() {
       : Math.max(0, rawElapsedSeconds - timerOffsetSeconds);
   const targetReached =
     focusing && !activeContinuous && elapsedSeconds >= activePresetSeconds;
-  const timerSeconds = focusing ? elapsedSeconds : 0;
-  const progressValue = focusing
+  const remainingPresetSeconds = Math.max(0, activePresetSeconds - elapsedSeconds);
+  const timerSeconds = focusing
     ? activeContinuous
-      ? 100
-      : Math.min(100, Math.round((elapsedSeconds / activePresetSeconds) * 100))
-    : 0;
+      ? elapsedSeconds
+      : remainingPresetSeconds
+    : selectedFocusMode === "OPEN"
+      ? 0
+      : selectedPreset * 60;
+  const timerLabel = focusing
+    ? activeContinuous
+      ? "경과 시간"
+      : "남은 시간"
+    : selectedFocusMode === "OPEN"
+      ? "시작 준비"
+      : "설정 시간";
+  const progressValue =
+    focusing && !activeContinuous
+      ? Math.min(100, Math.round((elapsedSeconds / activePresetSeconds) * 100))
+      : 0;
+  const progressBarWidth = activeContinuous ? 100 : progressValue;
   const recentSessions = useMemo(
     () => getSortedSessions(focusSessions?.sessions ?? []).slice(0, 5),
     [focusSessions?.sessions],
+  );
+  const recoveryDismissedForDate = Boolean(
+    targetDate && dismissedRecoveryDate === targetDate,
   );
 
   useEffect(() => {
@@ -281,6 +327,33 @@ export function FocusPage() {
     setTimerPausedSeconds(null);
   }, [activeFocusSession?.focusSessionId, localFocusStartedAt]);
 
+  useEffect(() => {
+    setDismissedRecoveryDate(readRecoveryDismissedDate());
+    recoveryCardViewedRef.current = false;
+  }, [targetDate]);
+
+  useEffect(() => {
+    if (
+      !token ||
+      !recoveryCard ||
+      recoveryDismissedForDate ||
+      recoveryCardViewedRef.current
+    ) {
+      return;
+    }
+
+    recoveryCardViewedRef.current = true;
+    void recordAnalyticsEventSafely({
+      eventType: "RECOVERY_CARD_VIEWED",
+      properties: {
+        post_exam_mode: recoveryCard.postExamMode,
+        recovery_type: recoveryCard.recoveryType,
+        source: "focus_page",
+      },
+      token,
+    });
+  }, [recoveryCard, recoveryDismissedForDate, token]);
+
   async function refreshFocusData() {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: homeTodayKey }),
@@ -297,6 +370,14 @@ export function FocusPage() {
       setActionError(getErrorMessage(error));
     },
     onSuccess: async (session) => {
+      void recordAnalyticsEventSafely({
+        eventType: "FOCUS_SESSION_STARTED",
+        properties: {
+          preset_seconds: session.presetSeconds,
+          source: "focus_page",
+        },
+        token,
+      });
       setSelectedFocusMode(session.presetMinutes);
       setActionError(null);
       setActionNotice("집중 세션을 시작했습니다.");
@@ -311,7 +392,19 @@ export function FocusPage() {
       setActionNotice(null);
       setActionError(getErrorMessage(error));
     },
-    onSuccess: async () => {
+    onSuccess: async (session) => {
+      void recordAnalyticsEventSafely({
+        eventType:
+          session.presetCompletionRate !== null && session.presetCompletionRate >= 1
+            ? "FOCUS_SESSION_COMPLETED"
+            : "FOCUS_SESSION_ABANDONED",
+        properties: {
+          actual_seconds: session.recordedElapsedSeconds ?? session.elapsedSeconds,
+          preset_seconds: session.presetSeconds,
+          source: "focus_page",
+        },
+        token,
+      });
       setActionError(null);
       setActionNotice("집중 세션을 멈췄습니다.");
       setTimerOffsetSeconds(0);
@@ -332,8 +425,8 @@ export function FocusPage() {
         const presetMinutes = resolveRecoveryPreset(
           recoveryCard?.suggestedDurationMinutes,
         );
-        await startFocusSession({ presetMinutes, token });
-        return { action, presetMinutes };
+        const session = await startFocusSession({ presetMinutes, token });
+        return { action, presetMinutes, session };
       }
 
       return { action: "DISMISS" };
@@ -343,16 +436,35 @@ export function FocusPage() {
       setActionError(getErrorMessage(error));
     },
     onSuccess: async (result) => {
+      void recordAnalyticsEventSafely({
+        eventType: "RECOVERY_CARD_ACTIONED",
+        properties: {
+          action: result.action.toLowerCase(),
+          duration_preset_min:
+            result.action === "START" ? result.presetMinutes : undefined,
+          source: "focus_page",
+        },
+        token,
+      });
       setActionError(null);
 
       if (result.action === "START") {
+        void recordAnalyticsEventSafely({
+          eventType: "FOCUS_SESSION_STARTED",
+          properties: {
+            preset_seconds: result.session.presetSeconds,
+            source: "recovery_card",
+          },
+          token,
+        });
         setSelectedFocusMode(result.presetMinutes);
         setRecoveryModalOpen(false);
         setActionNotice("복귀 Focus를 시작했습니다.");
       }
 
       if (result.action === "DISMISS") {
-        setRecoveryDismissed(true);
+        writeRecoveryDismissedDate(targetDate);
+        setDismissedRecoveryDate(targetDate);
         setRecoveryModalOpen(false);
         setActionNotice("Recovery Card를 오늘은 넘겨두었습니다.");
       }
@@ -378,6 +490,17 @@ export function FocusPage() {
       void queryClient.invalidateQueries({ queryKey: dailyReflectionKey });
     },
     onSuccess: async () => {
+      void recordAnalyticsEventSafely({
+        eventType: "DAILY_REFLECTION_CREATED",
+        properties: {
+          has_if_then: Boolean(
+            recoveryForm.ifCondition.trim() && recoveryForm.thenAction.trim(),
+          ),
+          source: "focus_page",
+          target_date: homeQuery.data?.targetDate,
+        },
+        token,
+      });
       setActionError(null);
       setActionNotice("회복 기록을 저장했습니다.");
       setRecoveryFormOpen(false);
@@ -462,7 +585,7 @@ export function FocusPage() {
     home.friendAccountability,
   );
   const showRecoveryEntry = Boolean(
-    recoveryCard?.needsRecovery && !recoveryDismissed,
+    recoveryCard?.needsRecovery && !recoveryDismissedForDate,
   );
   const recoveryPreset = resolveRecoveryPreset(
     recoveryCard?.suggestedDurationMinutes,
@@ -575,23 +698,25 @@ export function FocusPage() {
       />
 
       <div className={styles.contentShell}>
-        <header className={styles.topHeader}>
-          <div>
-            <span>오늘의 집중</span>
-            <h1 id="focus-title">Focus</h1>
-            <p>지금은 한 번에 하나만 켜두면 충분해요.</p>
-          </div>
-          <div className={styles.headerStats} aria-label="오늘 집중 요약">
-            <article>
-              <span>총 집중</span>
-              <strong>{formatCompactFocus(focusSessions.totalFocusSeconds)}</strong>
-            </article>
-            <article>
-              <span>세션</span>
-              <strong>{focusSessions.sessions.length}회</strong>
-            </article>
-          </div>
-        </header>
+        <PageHeader
+          className={styles.topHeader}
+          description="지금은 한 번에 하나만 켜두면 충분해요."
+          eyebrow="Focus"
+          title="집중 시간"
+          titleId="focus-title"
+          actions={
+            <div className={styles.headerStats} aria-label="오늘 집중 요약">
+              <article>
+                <span>총 집중</span>
+                <strong>{formatCompactFocus(focusSessions.totalFocusSeconds)}</strong>
+              </article>
+              <article>
+                <span>세션</span>
+                <strong>{focusSessions.sessions.length}회</strong>
+              </article>
+            </div>
+          }
+        />
 
         {actionError ? (
           <p className={styles.error} role="alert">
@@ -619,9 +744,6 @@ export function FocusPage() {
 
         <main className={styles.focusGrid}>
           <section className={styles.timerStage} aria-labelledby="timer-title">
-            <div className={styles.timerCharacter} aria-hidden="true">
-              <img src={focusing ? characterFocus : characterDefault} alt="" />
-            </div>
             <div className={styles.timerCopy}>
               <span className={focusing ? styles.liveBadge : styles.readyBadge}>
                 {timerPaused ? "잠시 멈춤" : focusing ? "진행 중" : "준비 완료"}
@@ -651,19 +773,21 @@ export function FocusPage() {
             </div>
 
             <div className={styles.timerFace} aria-live="polite">
-              <span>{focusing ? "경과 시간" : "시작 준비"}</span>
+              <span>{timerLabel}</span>
               <strong>{formatClock(timerSeconds)}</strong>
             </div>
 
             <div
-              className={styles.progressTrack}
+              className={`${styles.progressTrack} ${
+                activeContinuous ? styles.continuousTrack : ""
+              }`}
               role="progressbar"
               aria-label={activeContinuous ? "계속 타이머" : "프리셋 진행률"}
-              aria-valuemax={100}
-              aria-valuemin={0}
-              aria-valuenow={progressValue}
+              aria-valuemax={activeContinuous ? undefined : 100}
+              aria-valuemin={activeContinuous ? undefined : 0}
+              aria-valuenow={activeContinuous ? undefined : progressValue}
             >
-              <span style={{ width: `${progressValue}%` }} />
+              <span style={{ width: `${progressBarWidth}%` }} />
             </div>
 
             <div
@@ -845,35 +969,6 @@ export function FocusPage() {
                   </dd>
                 </div>
               </dl>
-
-              {recoveryCard.postExamMode &&
-              recoveryCard.recentExamTitle &&
-              recoveryCard.recentExamDate ? (
-                <dl className={styles.recoveryPostExam}>
-                  <div>
-                    <dt>시험명</dt>
-                    <dd>{recoveryCard.recentExamTitle}</dd>
-                  </div>
-                  <div>
-                    <dt>과목</dt>
-                    <dd>{recoveryCard.recentExamSubject ?? "-"}</dd>
-                  </div>
-                  <div>
-                    <dt>시험일</dt>
-                    <dd>{recoveryCard.recentExamDate}</dd>
-                  </div>
-                  <div>
-                    <dt>경과</dt>
-                    <dd>
-                      {recoveryCard.daysSinceRecentExam === null
-                        ? "-"
-                        : recoveryCard.daysSinceRecentExam === 0
-                          ? "오늘"
-                          : `${recoveryCard.daysSinceRecentExam}일 전`}
-                    </dd>
-                  </div>
-                </dl>
-              ) : null}
 
               {dailyReflectionQuery.isError ? (
                 <p className={styles.modalError} role="alert">
