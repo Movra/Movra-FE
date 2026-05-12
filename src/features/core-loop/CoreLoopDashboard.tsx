@@ -9,6 +9,8 @@ import characterSuccess from "../../assets/auth/character-success.png";
 import characterTopPick from "../../assets/auth/character-toppick.png";
 import { getErrorMessage } from "../../shared/api/errors";
 import { queryKeys } from "../../shared/queryKeys";
+import { PageHeader } from "../../shared/ui/PageHeader";
+import { recordAnalyticsEventSafely } from "../analytics/api";
 import { useAuth } from "../auth/useAuth";
 import { AppSidebar } from "./AppSidebar";
 import { getHomeToday, startFocusSession, stopFocusSession } from "./api";
@@ -22,7 +24,7 @@ import type {
 import styles from "./CoreLoopDashboard.module.css";
 
 const homeTodayKey = queryKeys.homeToday();
-const focusPresetOptions = [3, 5, 10, 25] as const;
+const defaultFocusPreset = 5;
 
 function HeaderIcon({ type }: { type: "bell" | "calendar" }) {
   return (
@@ -297,19 +299,11 @@ function getFocusGoalHours(startHour?: number, endHour?: number) {
   return Math.min(6, Math.max(1, endHour - startHour));
 }
 
-function getSlotStatus(slot: TimetableSlot, index: number) {
-  if (slot.topPick && index === 0) {
-    return "진행 예정";
-  }
-
-  return slot.topPick ? "TopPick" : "예정";
-}
-
 export function CoreLoopDashboard() {
   const { accessToken, logout } = useAuth();
   const token = accessToken ?? "";
   const queryClient = useQueryClient();
-  const [focusPreset, setFocusPreset] = useState<3 | 5 | 10 | 25>(5);
+  const focusPreset = defaultFocusPreset;
   const [actionError, setActionError] = useState<string | null>(null);
   const [actionNotice, setActionNotice] = useState<string | null>(null);
   const [notificationOpen, setNotificationOpen] = useState(false);
@@ -326,7 +320,15 @@ export function CoreLoopDashboard() {
       setActionNotice(null);
       setActionError(getErrorMessage(error));
     },
-    onSuccess: async () => {
+    onSuccess: async (session) => {
+      void recordAnalyticsEventSafely({
+        eventType: "FOCUS_SESSION_STARTED",
+        properties: {
+          preset_seconds: session.presetSeconds,
+          source: "core_loop_dashboard",
+        },
+        token,
+      });
       setActionError(null);
       setActionNotice("집중 세션을 시작했습니다.");
       await queryClient.invalidateQueries({ queryKey: homeTodayKey });
@@ -339,9 +341,21 @@ export function CoreLoopDashboard() {
       setActionNotice(null);
       setActionError(getErrorMessage(error));
     },
-    onSuccess: async () => {
+    onSuccess: async (session) => {
+      void recordAnalyticsEventSafely({
+        eventType:
+          session.presetCompletionRate !== null && session.presetCompletionRate >= 1
+            ? "FOCUS_SESSION_COMPLETED"
+            : "FOCUS_SESSION_ABANDONED",
+        properties: {
+          actual_seconds: session.recordedElapsedSeconds ?? session.elapsedSeconds,
+          preset_seconds: session.presetSeconds,
+          source: "core_loop_dashboard",
+        },
+        token,
+      });
       setActionError(null);
-      setActionNotice("집중 세션을 종료했습니다.");
+      setActionNotice("집중 세션을 멈췄습니다.");
       await queryClient.invalidateQueries({ queryKey: homeTodayKey });
     },
   });
@@ -396,9 +410,8 @@ export function CoreLoopDashboard() {
   const primaryTopPick = home.topPicks[0] ?? null;
   const futureVision = home.futureVision;
   const nextExamSchedule = home.nextExamSchedule;
-  const timetableSlots = getSortedTimetableSlots(
-    home.timetable?.slots ?? [],
-  ).slice(0, 5);
+  const allTimetableSlots = getSortedTimetableSlots(home.timetable?.slots ?? []);
+  const timetableSlots = allTimetableSlots.slice(0, 5);
   const activeFocusSession = home.activeFocusSession ?? null;
   const focusing = Boolean(activeFocusSession ?? home.focusSessions.focusing);
   const completedTaskCount = tasks.filter((task) => task.completed).length;
@@ -435,48 +448,50 @@ export function CoreLoopDashboard() {
       />
 
       <div className={styles.contentShell}>
-        <header className={styles.topHeader}>
-          <div>
-            <h1 id="home-title">안녕하세요, 김모브라님!</h1>
-            <p>오늘도 한 걸음씩, 나답게 성장해요.</p>
-          </div>
-          <div className={styles.headerMeta} aria-label="오늘 정보">
-            <button
-              aria-controls="notification-summary"
-              aria-expanded={notificationOpen}
-              aria-label={notificationSummary.label}
-              className={styles.headerIconButton}
-              onClick={() => setNotificationOpen((current) => !current)}
-              type="button"
-            >
-              <HeaderIcon type="bell" />
-              {notificationSummary.count > 0 ? (
-                <span className={styles.notificationBadge}>
-                  {notificationSummary.count}
-                </span>
-              ) : null}
-            </button>
-            <div className={styles.dateCard} aria-label="오늘 날짜">
-              <HeaderIcon type="calendar" />
-              <time dateTime={dateParts.isoDate}>
-                <strong>{dateParts.compactDate}</strong>
-                <span>{dateParts.weekday}</span>
-              </time>
-            </div>
-            {notificationOpen ? (
-              <div
-                className={styles.notificationPanel}
-                id="notification-summary"
-                role="status"
+        <PageHeader
+          className={styles.topHeader}
+          description="오늘은 한 가지를 끝내는 데 집중해볼까요?"
+          title="안녕하세요, 김모브라님!"
+          titleId="home-title"
+          actions={
+            <div className={styles.headerMeta} aria-label="오늘 정보">
+              <button
+                aria-controls="notification-summary"
+                aria-expanded={notificationOpen}
+                aria-label={notificationSummary.label}
+                className={styles.headerIconButton}
+                onClick={() => setNotificationOpen((current) => !current)}
+                type="button"
               >
-                <strong>{notificationSummary.title}</strong>
-                <span>{notificationSummary.label}</span>
-                <small>{notificationSummary.quietPolicy}</small>
-                <small>기준일 {dateParts.fullDate}</small>
+                <HeaderIcon type="bell" />
+                {notificationSummary.count > 0 ? (
+                  <span className={styles.notificationBadge}>
+                    {notificationSummary.count}
+                  </span>
+                ) : null}
+              </button>
+              <div className={styles.dateCard} aria-label="오늘 날짜">
+                <HeaderIcon type="calendar" />
+                <time dateTime={dateParts.isoDate}>
+                  <strong>{dateParts.compactDate}</strong>
+                  <span>{dateParts.weekday}</span>
+                </time>
               </div>
-            ) : null}
-          </div>
-        </header>
+              {notificationOpen ? (
+                <div
+                  className={styles.notificationPanel}
+                  id="notification-summary"
+                  role="status"
+                >
+                  <strong>{notificationSummary.title}</strong>
+                  <span>{notificationSummary.label}</span>
+                  <small>{notificationSummary.quietPolicy}</small>
+                  <small>기준일 {dateParts.fullDate}</small>
+                </div>
+              ) : null}
+            </div>
+          }
+        />
 
         {actionError ? (
           <p className={styles.error} role="alert">
@@ -490,49 +505,124 @@ export function CoreLoopDashboard() {
         ) : null}
 
         <main className={styles.homeGrid}>
-          <section className={styles.topPickBoard} aria-labelledby="toppick-title">
-            <div className={styles.boardHeader}>
-              <div>
-                <span className={styles.sectionIcon} aria-hidden="true">
-                  <DashboardIcon type="star" />
-                </span>
-                <h2 id="toppick-title">오늘의 TopPick</h2>
-              </div>
-              <p>오늘 반드시 지킬 핵심 행동</p>
-            </div>
+          <section className={styles.topPickBoard} aria-label="오늘의 TopPick">
+            <div className={styles.topPickContent}>
+              <span className={styles.eyebrow}>
+                <DashboardIcon type="star" />
+                오늘의 TopPick
+              </span>
+              <h2 id="toppick-title">
+                {primaryTopPick
+                  ? primaryTopPick.content
+                  : "오늘, 한 가지를 완성하는 날이에요!"}
+              </h2>
+              <p>
+                {primaryTopPick
+                  ? "정해둔 한 가지에 바로 들어갈 수 있게 집중 시간을 준비했어요."
+                  : "하나에 집중하면 성장의 길이 달라져요. 당신의 TopPick이 오늘을 바꿔줄 거예요."}
+              </p>
 
-            <div className={styles.topPickCards}>
               {primaryTopPick ? (
-                <article className={`${styles.topPickCard} ${styles.topPickGreen}`}>
-                  <div className={styles.cardNumber}>
-                    <span aria-hidden="true">
-                      <DashboardIcon type="star" />
-                    </span>
-                    <strong aria-label={primaryTopPick.completed ? "완료" : "진행 중"}>
-                      <DashboardIcon
-                        type={primaryTopPick.completed ? "check" : "square"}
-                      />
-                    </strong>
+                <div className={styles.topPickStatusCard}>
+                  <div className={styles.topPickMeta}>
+                    <span>{primaryTopPick.completed ? "완료" : "진행 준비"}</span>
+                    <strong>예상 {primaryTopPick.estimatedMinutes}분</strong>
                   </div>
-                  <h3>{primaryTopPick.content}</h3>
-                  <p>예상 {primaryTopPick.estimatedMinutes}분</p>
                   <div className={styles.progressLine} aria-hidden="true">
                     <span
                       style={{ width: `${getTopPickProgress(primaryTopPick, 0)}%` }}
                     />
                   </div>
-                  <NavLink className={styles.topPickActionLink} to="/planning">
-                    계획에서 변경하기
-                  </NavLink>
-                </article>
+                  <small>
+                    {primaryTopPick.memo.trim() ||
+                      "집중을 시작하면 오늘의 진행률이 쌓입니다."}
+                  </small>
+                </div>
               ) : (
-                <NavLink className={styles.emptyTopPickCard} to="/planning">
-                  <img src={characterTopPick} alt="" aria-hidden="true" />
-                  <strong>TopPick 선택하기</strong>
-                  <span>오늘 반드시 지킬 한 가지를 계획 페이지에서 골라요.</span>
-                </NavLink>
+                <p className={styles.topPickHint}>
+                  아직 TopPick이 없어요. 오늘 반드시 지킬 한 가지를 먼저 골라보세요.
+                </p>
               )}
+
+              <div className={styles.actionRow}>
+                {primaryTopPick ? (
+                  focusing ? (
+                    <button
+                      aria-label="멈추기"
+                      className={styles.primaryAction}
+                      onClick={() => stopFocusMutation.mutate()}
+                      type="button"
+                    >
+                      집중 멈추기
+                    </button>
+                  ) : (
+                    <button
+                      aria-label="집중 시작하기"
+                      className={styles.primaryAction}
+                      onClick={() => startFocusMutation.mutate()}
+                      type="button"
+                    >
+                      집중 시작하기
+                      <span aria-hidden="true">
+                        <DashboardIcon type="chevron" />
+                      </span>
+                    </button>
+                  )
+                ) : (
+                  <NavLink className={styles.primaryAction} to="/planning">
+                    오늘의 TopPick 선택하기
+                    <span aria-hidden="true">
+                      <DashboardIcon type="chevron" />
+                    </span>
+                  </NavLink>
+                )}
+                {primaryTopPick ? (
+                  <NavLink className={styles.secondaryAction} to="/planning">
+                    TopPick 수정
+                  </NavLink>
+                ) : null}
+              </div>
             </div>
+
+            <div className={styles.topPickVisual} aria-hidden="true">
+              <img src={characterTopPick} alt="" />
+            </div>
+          </section>
+
+          <section className={styles.timetablePanel} aria-labelledby="timetable-title">
+            <div className={styles.panelTitleRow}>
+              <div>
+                <span className={styles.sectionIcon} aria-hidden="true">
+                  <DashboardIcon type="table" />
+                </span>
+                <h2 id="timetable-title">오늘의 시간표</h2>
+              </div>
+              <NavLink to="/timetable">
+                {allTimetableSlots.length > 0 ? "전체 보기" : "시간표 계획하기"}
+              </NavLink>
+            </div>
+
+            {timetableSlots.length === 0 ? (
+              <div className={styles.compactEmpty}>
+                <img src={characterDefault} alt="" aria-hidden="true" />
+                <div>
+                  <strong>아직 계획된 시간 블록이 없어요.</strong>
+                  <p>시간표를 계획해서 하루를 더 효율적으로 보내보세요.</p>
+                </div>
+                <NavLink className={styles.secondaryAction} to="/timetable">
+                  시간표 계획하기
+                </NavLink>
+              </div>
+            ) : (
+              <ul className={styles.timetableList} aria-label="오늘 시간표 블록">
+                {timetableSlots.map((slot) => (
+                  <li className={styles.slotRow} key={slot.slotId}>
+                    <time>{formatSlotRange(slot)}</time>
+                    <strong>{slot.content}</strong>
+                  </li>
+                ))}
+              </ul>
+            )}
           </section>
 
           <section className={styles.visionPanel} aria-labelledby="vision-title">
@@ -541,30 +631,69 @@ export function CoreLoopDashboard() {
                 <span className={styles.sectionIcon} aria-hidden="true">
                   <DashboardIcon type="vision" />
                 </span>
-                <h2 id="vision-title">Future Vision</h2>
+                <h2 id="vision-title">주간 목표 시각화</h2>
               </div>
               <NavLink to="/future-vision">
-                {futureVision ? "수정하기" : "그리기"}
+                {futureVision ? "수정하기" : "목표 그리기"}
               </NavLink>
             </div>
-            {futureVision ? (
-              <div className={styles.visionPreview}>
+            <div className={styles.weeklyGoalCard}>
+              {futureVision ? (
                 <img
+                  className={styles.weeklyGoalImage}
                   alt=""
                   aria-hidden="true"
                   src={futureVision.weeklyVisionImageUrl}
                 />
-                <div>
-                  <strong>{futureVision.yearlyVisionDescription}</strong>
-                  <span>오늘의 목표가 흐려질 때 다시 볼 이미지</span>
+              ) : (
+                <div className={styles.goalFlow} aria-label="이번 주 목표 단계">
+                  <div>
+                    <span aria-hidden="true">
+                      <DashboardIcon type="vision" />
+                    </span>
+                    <strong>개념 완벽 이해</strong>
+                    <small>어법 2개</small>
+                  </div>
+                  <div>
+                    <span aria-hidden="true">
+                      <DashboardIcon type="target" />
+                    </span>
+                    <strong>기출 문제</strong>
+                    <small>정확히!</small>
+                  </div>
+                  <div>
+                    <span aria-hidden="true">
+                      <DashboardIcon type="win" />
+                    </span>
+                    <strong>나만의 속도로</strong>
+                    <small>꾸준히!</small>
+                  </div>
+                  <div>
+                    <span aria-hidden="true">
+                      <DashboardIcon type="star" />
+                    </span>
+                    <strong>6월 모의고사</strong>
+                    <small>성공하기</small>
+                  </div>
                 </div>
-              </div>
-            ) : (
-              <NavLink className={styles.emptyVisionLink} to="/future-vision">
-                <strong>자주 보고 싶은 목표 이미지를 걸어둘래요?</strong>
-                <span>연간 목표와 주간 목표를 직접 그려 홈에 연결해요.</span>
-              </NavLink>
-            )}
+              )}
+              {futureVision ? (
+                <div className={styles.annualGoalCopy}>
+                  <span>연간 목표</span>
+                  <strong>{futureVision.yearlyVisionDescription}</strong>
+                </div>
+              ) : (
+                <div className={styles.weeklyGoalCopy}>
+                  <strong>나는 내가 빛나는 법을 알아요</strong>
+                  <span>이번 주 목표 흐름</span>
+                  <div className={styles.goalKeywords} aria-label="이번 주 목표 흐름">
+                    <em>이해</em>
+                    <em>반복</em>
+                    <em>성장</em>
+                  </div>
+                </div>
+              )}
+            </div>
           </section>
 
           <section className={styles.examPanel} aria-labelledby="exam-title">
@@ -573,7 +702,7 @@ export function CoreLoopDashboard() {
                 <span className={styles.sectionIcon} aria-hidden="true">
                   <DashboardIcon type="exam" />
                 </span>
-                <h2 id="exam-title">다음 시험</h2>
+                <h2 id="exam-title">다음 시험 일정</h2>
               </div>
               <NavLink to="/exam-schedules">전체 보기</NavLink>
             </div>
@@ -592,112 +721,23 @@ export function CoreLoopDashboard() {
             )}
           </section>
 
-          <section className={styles.focusBanner} aria-labelledby="focus-title">
-            <div className={styles.focusCopy}>
-              <span className={styles.focusMark} aria-hidden="true">
+          <section className={styles.focusPanel} aria-labelledby="home-focus-title">
+            <div className={styles.focusPanelCopy}>
+              <span className={styles.sectionIcon} aria-hidden="true">
                 <DashboardIcon type="target" />
               </span>
               <div>
-                <p>{focusPreset}분 집중으로 시작해요</p>
-                <h2 id="focus-title">지금 바로 시작</h2>
+                <h2 id="home-focus-title">Focus</h2>
+                <p>오늘의 TopPick을 집중 세션으로 이어가요.</p>
               </div>
             </div>
-
-            <label className={styles.focusPreset}>
-              프리셋
-              <select
-                disabled={focusing}
-                onChange={(event) =>
-                  setFocusPreset(Number(event.target.value) as 3 | 5 | 10 | 25)
-                }
-                value={focusPreset}
-              >
-                {focusPresetOptions.map((preset) => (
-                  <option key={preset} value={preset}>
-                    {preset}분
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            {focusing ? (
-              <button
-                aria-label="종료"
-                className={styles.focusButton}
-                onClick={() => stopFocusMutation.mutate()}
-                type="button"
-              >
-                Focus 종료하기
-              </button>
-            ) : (
-              <button
-                aria-label="시작"
-                className={styles.focusButton}
-                onClick={() => startFocusMutation.mutate()}
-                type="button"
-              >
-                지금 바로 {focusPreset}분 Focus 시작하기
-                <span aria-hidden="true">
-                  <DashboardIcon type="chevron" />
-                </span>
-              </button>
-            )}
-
-            <div className={styles.timerScene} aria-hidden="true">
-              <img src={characterFocus} alt="" />
-              <strong>{focusPreset}:00</strong>
-            </div>
-          </section>
-
-          <section className={styles.timetablePanel} aria-labelledby="timetable-title">
-            <div className={styles.panelTitleRow}>
-              <div>
-                <span className={styles.sectionIcon} aria-hidden="true">
-                  <DashboardIcon type="table" />
-                </span>
-                <h2 id="timetable-title">오늘의 시간표</h2>
-              </div>
-              <NavLink to="/timetable">전체 보기</NavLink>
-            </div>
-
-            {timetableSlots.length === 0 ? (
-              <div className={styles.compactEmpty}>
-                <img src={characterDefault} alt="" aria-hidden="true" />
-                <p>아직 배정된 시간 블록이 없습니다.</p>
-              </div>
-            ) : (
-              <ul className={styles.timetableList}>
-                {timetableSlots.map((slot, index) => (
-                  <li
-                    className={slot.topPick ? styles.activeSlot : styles.slotRow}
-                    key={slot.slotId}
-                  >
-                    <span aria-hidden="true" />
-                    <time>{formatSlotRange(slot)}</time>
-                    <strong>{slot.content}</strong>
-                    <em>{getSlotStatus(slot, index)}</em>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
-
-          <section className={styles.recoveryPanel} aria-labelledby="recovery-title">
-            <img src={characterRecovery} alt="" aria-hidden="true" />
-            <div>
-              <p>오늘 계획대로 되지 않았나요?</p>
-              <h2 id="recovery-title">괜찮아요, 다시 시작하면 돼요.</h2>
-              <span>
-                {home.recoveryCard.suggestedAction ??
-                  "완벽하지 않아도, 다시 하는 것만으로도 충분해요."}
-              </span>
-            </div>
-            <NavLink className={styles.recoveryLink} to="/reflection">
-              복귀 루틴 보기
+            <NavLink className={styles.focusPageLink} to="/focus">
+              Focus 페이지로 이동
               <span aria-hidden="true">
                 <DashboardIcon type="chevron" />
               </span>
             </NavLink>
+            <img src={characterFocus} alt="" aria-hidden="true" />
           </section>
 
           <section className={styles.summaryPanel} aria-labelledby="summary-title">
@@ -771,6 +811,38 @@ export function CoreLoopDashboard() {
             </div>
           </section>
         </main>
+
+        <div className={styles.mobileStickyAction}>
+          {primaryTopPick ? (
+            focusing ? (
+              <button
+                aria-label="모바일 하단 집중 멈추기"
+                className={styles.primaryAction}
+                onClick={() => stopFocusMutation.mutate()}
+                type="button"
+              >
+                집중 멈추기
+              </button>
+            ) : (
+              <button
+                aria-label="모바일 하단 집중 시작하기"
+                className={styles.primaryAction}
+                onClick={() => startFocusMutation.mutate()}
+                type="button"
+              >
+                집중 시작하기
+              </button>
+            )
+          ) : (
+            <NavLink
+              aria-label="모바일 하단 오늘의 TopPick 선택하기"
+              className={styles.primaryAction}
+              to="/planning"
+            >
+              오늘의 TopPick 선택하기
+            </NavLink>
+          )}
+        </div>
       </div>
     </section>
   );

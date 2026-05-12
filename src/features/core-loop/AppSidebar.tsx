@@ -12,6 +12,7 @@ type SidebarItem = {
 };
 
 type SidebarIconType =
+  | "accountability"
   | "exam"
   | "focus"
   | "friends"
@@ -20,11 +21,13 @@ type SidebarIconType =
   | "reflection"
   | "settings"
   | "statistics"
+  | "studyRoom"
   | "timetable"
   | "vision";
 
 type AppSidebarProps = {
-  friendText: string;
+  ariaHidden?: boolean;
+  friendText?: string;
   onLogout: () => void;
   profileName?: string;
   profileSubtitle: string;
@@ -40,7 +43,8 @@ const sidebarItems: SidebarItem[] = [
   { icon: "focus", label: "집중", path: "/focus" },
   { icon: "reflection", label: "회고", path: "/reflection" },
   { icon: "statistics", label: "통계", path: "/statistics" },
-  { icon: "friends", label: "친구", path: "/friends" },
+  { icon: "studyRoom", label: "스터디룸", path: "/study-room" },
+  { icon: "accountability", label: "친구 감시", path: "/accountability" },
   { icon: "settings", label: "설정", path: "/settings" },
 ];
 
@@ -119,6 +123,22 @@ function SidebarIcon({ type }: { type: SidebarIconType }) {
           <path d="M17 20a5 5 0 0 0-3-4.5" />
         </>
       ) : null}
+      {type === "studyRoom" ? (
+        <>
+          <rect x="3" y="6" width="18" height="12" rx="2" />
+          <path d="M8 6V4M16 6V4" />
+          <circle cx="9" cy="13" r="1.5" />
+          <circle cx="15" cy="13" r="1.5" />
+        </>
+      ) : null}
+      {type === "accountability" ? (
+        <>
+          <circle cx="12" cy="9" r="3" />
+          <path d="M6 21a6 6 0 0 1 12 0" />
+          <path d="M19 6l2 2-2 2" />
+          <path d="M21 8h-6" />
+        </>
+      ) : null}
       {type === "settings" ? (
         <>
           <circle cx="12" cy="12" r="3" />
@@ -149,14 +169,15 @@ function FriendsIcon() {
 }
 
 export function AppSidebar({
-  friendText,
+  ariaHidden = false,
+  friendText = "연결된 친구 없음",
   onLogout,
   profileName = "김모브라",
   profileSubtitle,
   quote = "작은 실행이 큰 변화를 만들어요.",
 }: AppSidebarProps) {
   return (
-    <aside className={styles.sidebar}>
+    <aside className={styles.sidebar} aria-hidden={ariaHidden ? true : undefined}>
       <NavLink className={styles.brand} to="/" aria-label="Movra 홈">
         <img className={styles.brandLogo} src={movraLogo} alt="Movra" />
       </NavLink>
@@ -186,7 +207,7 @@ export function AppSidebar({
             <span>{profileSubtitle}</span>
           </div>
         </div>
-        <div className={styles.friendCard} aria-label="친구 상태">
+        <div className={styles.friendCard} aria-label="친구 Accountability">
           <span className={styles.friendCardIcon} aria-hidden="true">
             <FriendsIcon />
           </span>

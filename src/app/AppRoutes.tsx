@@ -1,8 +1,9 @@
-import { NavLink, Route, Routes, useLocation } from "react-router-dom";
+import { Navigate, NavLink, Route, Routes, useLocation } from "react-router-dom";
 
 import { RequireAuth } from "../features/auth/RequireAuth";
+import { AccountabilityPage } from "../pages/AccountabilityPage";
 import { ExamSchedulesPage } from "../pages/ExamSchedulesPage";
-import { FeaturePlaceholderPage } from "../pages/FeaturePlaceholderPage";
+import { FocusPage } from "../pages/FocusPage";
 import { FutureVisionPage } from "../pages/FutureVisionPage";
 import { HomePage } from "../pages/HomePage";
 import { LoginPage } from "../pages/LoginPage";
@@ -12,16 +13,12 @@ import { PlanningPage } from "../pages/PlanningPage";
 import { ReflectionPage } from "../pages/ReflectionPage";
 import { SettingsPage } from "../pages/SettingsPage";
 import { SignupPage } from "../pages/SignupPage";
+import { StatisticsPage } from "../pages/StatisticsPage";
+import { StudyRoomPage } from "../pages/StudyRoomPage";
 import { TimetablePage } from "../pages/TimetablePage";
 import { useAuth } from "../features/auth/useAuth";
 import { SproutMark } from "../shared/ui/SproutMark";
 import styles from "./AppRoutes.module.css";
-
-const placeholderRoutes = [
-  { path: "/focus", title: "집중" },
-  { path: "/statistics", title: "통계" },
-  { path: "/friends", title: "친구" },
-] as const;
 
 export function AppRoutes() {
   const { isAuthenticated, logout } = useAuth();
@@ -34,13 +31,15 @@ export function AppRoutes() {
   const isHomeRoute = location.pathname === "/";
   const isPlanningRoute = location.pathname === "/planning";
   const isTimetableRoute = location.pathname === "/timetable";
+  const isFocusRoute = location.pathname === "/focus";
   const isFutureVisionRoute = location.pathname === "/future-vision";
   const isExamSchedulesRoute = location.pathname === "/exam-schedules";
   const isReflectionRoute = location.pathname === "/reflection";
+  const isStatisticsRoute = location.pathname === "/statistics";
   const isSettingsRoute = location.pathname === "/settings";
-  const isPlaceholderRoute = placeholderRoutes.some(
-    (route) => route.path === location.pathname,
-  );
+  const isStudyRoomRoute =
+    location.pathname.startsWith("/study-room") || location.pathname === "/friends";
+  const isAccountabilityRoute = location.pathname === "/accountability";
 
   return (
     <div className={styles.appShell}>
@@ -51,11 +50,14 @@ export function AppRoutes() {
       isHomeRoute ||
       isPlanningRoute ||
       isTimetableRoute ||
+      isFocusRoute ||
       isFutureVisionRoute ||
       isExamSchedulesRoute ||
       isReflectionRoute ||
+      isStatisticsRoute ||
       isSettingsRoute ||
-      isPlaceholderRoute ? null : (
+      isStudyRoomRoute ||
+      isAccountabilityRoute ? null : (
         <header className={styles.header}>
           <nav className={styles.nav} aria-label="주요 메뉴">
             <NavLink className={styles.wordmark} to="/" aria-label="Movra 홈">
@@ -88,11 +90,14 @@ export function AppRoutes() {
               ? styles.dashboardMain
               : isPlanningRoute ||
                   isTimetableRoute ||
+                  isFocusRoute ||
                   isFutureVisionRoute ||
                   isExamSchedulesRoute ||
                   isReflectionRoute ||
+                  isStatisticsRoute ||
                   isSettingsRoute ||
-                  isPlaceholderRoute
+                  isStudyRoomRoute ||
+                  isAccountabilityRoute
                 ? styles.dashboardMain
                 : styles.main
         }
@@ -137,6 +142,14 @@ export function AppRoutes() {
             }
           />
           <Route
+            path="/focus"
+            element={
+              <RequireAuth>
+                <FocusPage />
+              </RequireAuth>
+            }
+          />
+          <Route
             path="/future-vision"
             element={
               <RequireAuth>
@@ -161,6 +174,14 @@ export function AppRoutes() {
             }
           />
           <Route
+            path="/statistics"
+            element={
+              <RequireAuth>
+                <StatisticsPage />
+              </RequireAuth>
+            }
+          />
+          <Route
             path="/settings"
             element={
               <RequireAuth>
@@ -168,17 +189,54 @@ export function AppRoutes() {
               </RequireAuth>
             }
           />
-          {placeholderRoutes.map((route) => (
-            <Route
-              element={
-                <RequireAuth>
-                  <FeaturePlaceholderPage title={route.title} />
-                </RequireAuth>
-              }
-              key={route.path}
-              path={route.path}
-            />
-          ))}
+          <Route
+            path="/study-room"
+            element={
+              <RequireAuth>
+                <StudyRoomPage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/study-room/create"
+            element={
+              <RequireAuth>
+                <StudyRoomPage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/study-room/join"
+            element={
+              <RequireAuth>
+                <StudyRoomPage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/study-room/rooms/:roomId"
+            element={
+              <RequireAuth>
+                <StudyRoomPage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/friends"
+            element={
+              <RequireAuth>
+                <Navigate replace to="/study-room" />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/accountability"
+            element={
+              <RequireAuth>
+                <AccountabilityPage />
+              </RequireAuth>
+            }
+          />
           <Route
             path="*"
             element={

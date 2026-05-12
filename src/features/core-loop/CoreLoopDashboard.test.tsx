@@ -145,15 +145,14 @@ describe("CoreLoopDashboard", () => {
 
     const topPickPanel = screen.getByRole("region", { name: "오늘의 TopPick" });
     expect(within(topPickPanel).getByText("수학 개념 정리")).toBeInTheDocument();
+    expect(within(topPickPanel).getByText("오늘의 TopPick")).toBeInTheDocument();
     expect(
-      within(topPickPanel).getByText("오늘 반드시 지킬 핵심 행동"),
-    ).toBeInTheDocument();
-    expect(
-      within(topPickPanel).getByRole("link", { name: "계획에서 변경하기" }),
+      within(topPickPanel).getByRole("link", { name: "TopPick 수정" }),
     ).toHaveAttribute("href", "/planning");
-    expect(within(topPickPanel).queryByText("TopPick 대기")).not.toBeInTheDocument();
     expect(
-      within(topPickPanel).queryByText("최대 3개까지 선택할 수 있어요"),
+      within(topPickPanel).queryByText(
+        "아직 TopPick이 없어요. 오늘 반드시 지킬 한 가지를 먼저 골라보세요.",
+      ),
     ).not.toBeInTheDocument();
     const timetablePanel = screen.getByRole("region", { name: "오늘의 시간표" });
     expect(
@@ -192,32 +191,118 @@ describe("CoreLoopDashboard", () => {
   });
 
   it("starts and stops a focus session from the home CTA", async () => {
-    setupHomeHandler(createHomeTodayFixture());
+    setupHomeHandler(
+      createHomeTodayFixture({
+        topPicks: [
+          {
+            completed: false,
+            content: "수학 개념 정리",
+            estimatedMinutes: 30,
+            memo: "",
+            taskId: "task-1",
+          },
+        ],
+      }),
+    );
     authenticate();
 
     render(<App />);
 
-    await userEvent.click(await screen.findByRole("button", { name: "시작" }));
+    await userEvent.click(
+      await screen.findByRole("button", { name: "집중 시작하기" }),
+    );
     expect(await screen.findByRole("status")).toHaveTextContent(
       "집중 세션을 시작했습니다.",
     );
 
-    await userEvent.click(await screen.findByRole("button", { name: "종료" }));
+    await userEvent.click(
+      await screen.findByRole("button", { name: "멈추기" }),
+    );
     expect(await screen.findByRole("status")).toHaveTextContent(
-      "집중 세션을 종료했습니다.",
+      "집중 세션을 멈췄습니다.",
     );
     expect(screen.getByText("5m")).toBeInTheDocument();
   });
 
-  it("renders unimplemented placeholders for feature pages", async () => {
-    setupHomeHandler(createHomeTodayFixture());
-    authenticate("/statistics");
+  it("renders Home Today when invite code status is returned as an object", async () => {
+    setupHomeHandler(
+      createHomeTodayFixture({
+        friendAccountability: {
+          inviteCodeStatus: {
+            expired: false,
+            expiredAt: "2026-04-25T09:00:00",
+            inviteCode: "INVITE15",
+            reissuable: true,
+            watcherConnected: false,
+          },
+          relationCreated: true,
+          watchedByFriend: false,
+          watchingFriend: false,
+        },
+      }),
+    );
+    authenticate();
+
+    render(<App />);
+
+    expect(await screen.findByText("초대 코드 대기 중")).toBeInTheDocument();
+  });
+
+  it("shows the focus timing card only when Home Today enables it", async () => {
+    setupHomeHandler(
+      createHomeTodayFixture({
+        showFocusTimingCard: true,
+      }),
+    );
+    authenticate();
 
     render(<App />);
 
     expect(
-      await screen.findByRole("heading", { name: "기능 미구현" }),
+      await screen.findByRole("heading", {
+        name: "안녕하세요, 김모브라님!",
+      }),
     ).toBeInTheDocument();
-    expect(screen.getByText("통계")).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: "통계" }),
+    ).toHaveAttribute("href", "/statistics");
+  });
+
+  it("hides the focus timing card when Home Today disables it", async () => {
+    setupHomeHandler(createHomeTodayFixture({ showFocusTimingCard: false }));
+    authenticate();
+
+    render(<App />);
+
+    expect(
+      await screen.findByRole("heading", {
+        name: "안녕하세요, 김모브라님!",
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("heading", { name: "당신의 황금 시간대" }),
+    ).toBeNull();
+  });
+
+  it("renders the Study Room page for the study-room route", async () => {
+    server.use(
+      http.get("http://localhost:8080/rooms", () => HttpResponse.json([])),
+      http.get("http://localhost:8080/my-participations", () =>
+        HttpResponse.json([]),
+      ),
+    );
+    authenticate("/study-room");
+
+    render(<App />);
+
+    expect(
+      await screen.findByRole("heading", { name: "스터디룸" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "방 만들기" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: "공개방 확인하기" }),
+    ).toHaveAttribute("href", "/study-room/join");
   });
 });
