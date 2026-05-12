@@ -1,0 +1,78 @@
+.pageHeader.pageHeaderSurface {
+  --page-header-eyebrow-size: 0.82rem;
+  --page-header-title-size: 2rem;
+  --page-header-description-size: 0.95rem;
+
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  text-align: left;
+}
+
+.pageHeader.pageHeaderSurface > .copy {
+  display: grid;
+  min-width: 0;
+  max-width: 760px;
+  gap: 6px;
+}
+
+.pageHeader.pageHeaderSurface > .copy > .eyebrow,
+.pageHeader.pageHeaderSurface > .copy > .title,
+.pageHeader.pageHeaderSurface > .copy > .description {
+  margin: 0;
+  letter-spacing: 0;
+}
+
+.pageHeader.pageHeaderSurface > .copy > .eyebrow {
+  color: var(--color-primary-active);
+  font-size: var(--page-header-eyebrow-size);
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.pageHeader.pageHeaderSurface > .copy > .title {
+  overflow-wrap: anywhere;
+  color: var(--color-ink);
+  font-size: var(--page-header-title-size);
+  font-weight: 600;
+  line-height: 1.12;
+}
+
+.pageHeader.pageHeaderSurface > .copy > .title > strong {
+  color: inherit;
+  font-weight: inherit;
+}
+
+.pageHeader.pageHeaderSurface > .copy > .description {
+  max-width: 66ch;
+  color: var(--color-muted);
+  font-size: var(--page-header-description-size);
+  line-height: 1.55;
+}
+
+.pageHeader.pageHeaderSurface > .actions {
+  display: flex;
+  flex: 0 1 auto;
+  min-width: 0;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+@media (max-width: 780px) {
+  .pageHeader.pageHeaderSurface {
+    --page-header-title-size: 1.7rem;
+
+    align-items: stretch;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .pageHeader.pageHeaderSurface > .actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+}
