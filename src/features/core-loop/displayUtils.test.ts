@@ -60,5 +60,29 @@ describe("core loop display utils", () => {
     expect(
       getFriendAccountabilityText({ ...base, inviteCodeStatus: "초대 대기" }),
     ).toBe("초대 대기");
+    expect(
+      getFriendAccountabilityText({
+        ...base,
+        inviteCodeStatus: {
+          expired: false,
+          expiredAt: "2026-04-25T09:00:00",
+          inviteCode: "INVITE15",
+          reissuable: true,
+          watcherConnected: false,
+        },
+      }),
+    ).toBe("초대 코드 대기 중");
+    expect(
+      getFriendAccountabilityText({
+        ...base,
+        inviteCodeStatus: {
+          expired: true,
+          expiredAt: "2026-04-25T09:00:00",
+          inviteCode: "INVITE15",
+          reissuable: true,
+          watcherConnected: false,
+        },
+      }),
+    ).toBe("초대 코드 재발급 가능");
   });
 });

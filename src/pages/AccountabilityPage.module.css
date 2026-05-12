@@ -1,0 +1,472 @@
+.accountabilityPage {
+  display: grid;
+  height: 100vh;
+  height: 100dvh;
+  min-height: 100vh;
+  min-height: 100dvh;
+  overflow: hidden;
+  grid-template-columns: 232px minmax(0, 1fr);
+  color: var(--color-ink);
+  background: linear-gradient(180deg, var(--color-canvas) 0%, var(--color-canvas-soft) 100%);
+}
+
+.contentShell {
+  width: min(100%, 1480px);
+  min-width: 0;
+  min-height: 0;
+  margin: 0 auto;
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding: 28px;
+}
+
+.pageHeader {
+  display: flex;
+  min-width: 0;
+  align-items: end;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 18px;
+}
+
+.pageHeader > div:first-child {
+  min-width: 0;
+}
+
+.pageHeader p,
+.panelHeader p {
+  margin: 0;
+  color: var(--color-primary-active);
+  font-size: var(--font-size-caption);
+}
+
+.pageHeader h1 {
+  margin: 2px 0 6px;
+  font-size: clamp(2rem, 5vw, 4.1rem);
+  font-weight: 500;
+  line-height: 1;
+}
+
+.pageHeader span {
+  color: var(--color-body);
+  font-size: var(--font-size-body);
+}
+
+.headerStats {
+  display: grid;
+  min-width: 300px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.headerStats article,
+.panel,
+.summaryPanel {
+  min-width: 0;
+  border: 1px solid rgba(220, 231, 216, 0.92);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.9);
+}
+
+.headerStats article {
+  padding: 14px 16px;
+}
+
+.headerStats span,
+.headerStats strong {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.headerStats span {
+  color: var(--color-muted);
+  font-size: var(--font-size-caption);
+}
+
+.headerStats strong {
+  font-size: 1.1rem;
+  font-weight: 500;
+}
+
+.accountabilityGrid {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: minmax(300px, 0.95fr) minmax(320px, 1.05fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.panel,
+.summaryPanel {
+  padding: 18px;
+}
+
+.summaryPanel {
+  grid-column: 1 / -1;
+}
+
+.panelHeader {
+  display: flex;
+  min-width: 0;
+  align-items: start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.panelHeader h2 {
+  margin: 2px 0 0;
+  font-size: var(--font-size-title);
+  font-weight: 500;
+}
+
+.statusBadge {
+  flex: 0 0 auto;
+  padding: 6px 10px;
+  border-radius: var(--radius-pill);
+  color: #21516a;
+  background: #e0f1f7;
+  font-size: var(--font-size-caption);
+}
+
+.form,
+.summaryForm {
+  display: grid;
+  gap: 12px;
+}
+
+.form label,
+.summaryForm label {
+  display: grid;
+  gap: 6px;
+  color: var(--color-body);
+  font-size: var(--font-size-body-sm);
+}
+
+.form input:not([type="checkbox"]),
+.summaryForm input {
+  width: 100%;
+  min-height: 42px;
+  border: 1px solid var(--color-hairline);
+  border-radius: 8px;
+  padding: 0 12px;
+  color: var(--color-ink);
+  background: var(--color-canvas-soft);
+}
+
+.checkboxGroup {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.checkboxGroup legend {
+  margin-bottom: 4px;
+  color: var(--color-body);
+  font-size: var(--font-size-body-sm);
+}
+
+.checkboxGroup label {
+  display: flex;
+  min-height: 40px;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--color-hairline);
+  border-radius: 8px;
+  background: var(--color-surface-card);
+}
+
+.checkboxGroup input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--color-primary);
+}
+
+.primaryButton,
+.secondaryButton,
+.actionRow button,
+.relationList button,
+.targetTabs button,
+.segmentedControl button,
+.centerState button {
+  min-height: 40px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.primaryButton {
+  border: 0;
+  color: var(--color-on-primary);
+  background: var(--color-primary);
+}
+
+.secondaryButton,
+.actionRow button,
+.relationList button,
+.targetTabs button,
+.segmentedControl button,
+.centerState button {
+  border: 1px solid var(--color-hairline);
+  color: var(--color-ink);
+  background: var(--color-surface-card);
+}
+
+.primaryButton:disabled,
+.secondaryButton:disabled,
+.actionRow button:disabled,
+.relationList button:disabled,
+.targetTabs button:disabled {
+  cursor: not-allowed;
+  opacity: 0.62;
+}
+
+.inviteBox {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+  padding: 12px;
+  border-radius: 8px;
+  color: #163b2a;
+  background: #dff3e8;
+}
+
+.inviteBox dl,
+.summaryList {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+}
+
+.inviteBox div,
+.summaryList div {
+  min-width: 0;
+}
+
+.inviteBox dt,
+.inviteBox dd,
+.summaryList dt,
+.summaryList dd {
+  margin: 0;
+}
+
+.inviteBox dt,
+.summaryList dt {
+  color: var(--color-muted);
+  font-size: var(--font-size-caption);
+}
+
+.inviteBox dd,
+.summaryList dd {
+  overflow-wrap: anywhere;
+  font-size: var(--font-size-body-sm);
+}
+
+.actionRow {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.relationList {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.relationList li {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  padding: 12px;
+  border: 1px solid var(--color-hairline-soft);
+  border-radius: 8px;
+}
+
+.relationList li > div {
+  display: grid;
+  min-width: 0;
+  gap: 4px;
+}
+
+.relationList strong,
+.relationList span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.relationList span {
+  color: var(--color-muted);
+  font-size: var(--font-size-caption);
+}
+
+.targetTabs,
+.segmentedControl,
+.dateRange {
+  display: grid;
+  min-width: 0;
+  gap: 8px;
+}
+
+.targetTabs {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-bottom: 12px;
+}
+
+.segmentedControl,
+.dateRange {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.targetTabs button[aria-pressed="true"],
+.segmentedControl button[aria-pressed="true"] {
+  border-color: var(--color-primary);
+  color: var(--color-on-primary);
+  background: var(--color-primary);
+}
+
+.summaryResult {
+  min-height: 80px;
+  margin-top: 14px;
+  padding: 14px;
+  border-radius: 8px;
+  background: var(--color-canvas-soft);
+}
+
+.emptyText {
+  margin: 0;
+  color: var(--color-body);
+  font-size: var(--font-size-body-sm);
+}
+
+.inlineError {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  color: var(--color-error);
+  background: var(--color-error-soft);
+}
+
+.error,
+.success {
+  margin: 0 0 14px;
+  padding: 12px 14px;
+  border-radius: 8px;
+  font-size: var(--font-size-body-sm);
+}
+
+.error {
+  color: var(--color-error);
+  background: var(--color-error-soft);
+}
+
+.success {
+  color: var(--color-success);
+  background: var(--color-success-soft);
+}
+
+.centerState {
+  display: grid;
+  min-height: min(560px, calc(100vh - 72px));
+  min-height: min(560px, calc(100dvh - 72px));
+  place-items: center;
+  align-content: center;
+  gap: 14px;
+  padding: 32px;
+  color: var(--color-ink);
+  text-align: center;
+  background: var(--color-canvas);
+}
+
+.centerState img {
+  width: 140px;
+  height: 140px;
+  object-fit: contain;
+}
+
+.centerState h1,
+.centerState p {
+  margin: 0;
+}
+
+.centerState h1 {
+  font-size: 1.5rem;
+  font-weight: 500;
+}
+
+.centerState p {
+  color: var(--color-body);
+}
+
+.centerState button {
+  padding: 0 18px;
+  color: var(--color-on-primary);
+  background: var(--color-primary);
+}
+
+.form input:focus-visible,
+.summaryForm input:focus-visible,
+.checkboxGroup input:focus-visible,
+.primaryButton:focus-visible,
+.secondaryButton:focus-visible,
+.actionRow button:focus-visible,
+.relationList button:focus-visible,
+.targetTabs button:focus-visible,
+.segmentedControl button:focus-visible,
+.centerState button:focus-visible {
+  outline: 3px solid var(--color-primary-soft);
+  outline-offset: 2px;
+}
+
+@media (max-width: 1020px) {
+  .accountabilityPage {
+    height: auto;
+    min-height: 100vh;
+    min-height: 100dvh;
+    overflow: visible;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .contentShell {
+    overflow: visible;
+  }
+
+  .pageHeader {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .headerStats,
+  .accountabilityGrid {
+    min-width: 0;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .summaryPanel {
+    grid-column: auto;
+  }
+}
+
+@media (max-width: 620px) {
+  .contentShell {
+    padding: 18px 14px 24px;
+  }
+
+  .headerStats,
+  .actionRow,
+  .relationList li,
+  .targetTabs,
+  .segmentedControl,
+  .dateRange {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

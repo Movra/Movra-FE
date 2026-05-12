@@ -35,5 +35,24 @@ export function getFriendAccountabilityText(
     return "내가 친구를 지켜보는 중";
   }
 
-  return friendAccountability.inviteCodeStatus ?? "친구 연결 대기 중";
+  const { inviteCodeStatus } = friendAccountability;
+  if (!inviteCodeStatus) {
+    return "친구 연결 대기 중";
+  }
+
+  if (typeof inviteCodeStatus === "string") {
+    return inviteCodeStatus;
+  }
+
+  if (inviteCodeStatus.watcherConnected) {
+    return "친구가 나를 지켜보는 중";
+  }
+
+  if (inviteCodeStatus.expired) {
+    return inviteCodeStatus.reissuable
+      ? "초대 코드 재발급 가능"
+      : "초대 코드 만료";
+  }
+
+  return inviteCodeStatus.inviteCode ? "초대 코드 대기 중" : "친구 연결 대기 중";
 }

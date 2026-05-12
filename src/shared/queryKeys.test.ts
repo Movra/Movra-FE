@@ -2,6 +2,42 @@ import { queryKeys } from "./queryKeys";
 
 describe("queryKeys", () => {
   it("builds stable domain query keys", () => {
+    expect(queryKeys.accountabilityFriends()).toEqual([
+      "accountability-relations",
+      "friends",
+    ]);
+    expect(queryKeys.accountabilityInviteCodeStatus()).toEqual([
+      "accountability-relations",
+      "invite-code",
+      "status",
+    ]);
+    expect(queryKeys.accountabilityWatcherSummaries()).toEqual([
+      "accountability-relations",
+      "watcher",
+    ]);
+    expect(
+      queryKeys.accountabilityWatcherSummary("focus-sessions", {
+        date: "2026-04-24",
+        mode: "date",
+      }),
+    ).toEqual([
+      "accountability-relations",
+      "watcher",
+      "focus-sessions",
+      { date: "2026-04-24", mode: "date" },
+    ]);
+    expect(
+      queryKeys.accountabilityWatcherSummary("top-picks", {
+        from: "2026-04-20",
+        mode: "range",
+        to: "2026-04-24",
+      }),
+    ).toEqual([
+      "accountability-relations",
+      "watcher",
+      "top-picks",
+      { from: "2026-04-20", mode: "range", to: "2026-04-24" },
+    ]);
     expect(queryKeys.homeToday()).toEqual(["home-today"]);
     expect(queryKeys.dailyReflection("2026-04-24")).toEqual([
       "daily-reflection",

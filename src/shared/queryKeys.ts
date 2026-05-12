@@ -1,4 +1,15 @@
 export const queryKeys = {
+  accountabilityFriends: () => ["accountability-relations", "friends"] as const,
+  accountabilityInviteCodeStatus: () =>
+    ["accountability-relations", "invite-code", "status"] as const,
+  accountabilityWatcherSummaries: () =>
+    ["accountability-relations", "watcher"] as const,
+  accountabilityWatcherSummary: (
+    target: string,
+    params:
+      | { date: string; mode: "date" }
+      | { from: string; mode: "range"; to: string },
+  ) => ["accountability-relations", "watcher", target, params] as const,
   behaviorProfileMe: () => ["behavior-profile", "me"] as const,
   dailyReflection: (targetDate: string) =>
     ["daily-reflection", targetDate] as const,

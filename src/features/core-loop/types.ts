@@ -139,11 +139,19 @@ export type NotificationPreference = {
   maxDailyPushCount: number;
 };
 
+export type FriendAccountabilityInviteCodeStatus = {
+  inviteCode: string | null;
+  expiredAt: string | null;
+  expired: boolean;
+  reissuable: boolean;
+  watcherConnected: boolean;
+};
+
 export type FriendAccountability = {
   relationCreated: boolean;
   watchedByFriend: boolean;
   watchingFriend: boolean;
-  inviteCodeStatus: string | null;
+  inviteCodeStatus: FriendAccountabilityInviteCodeStatus | string | null;
 };
 
 export type HomeToday = {
