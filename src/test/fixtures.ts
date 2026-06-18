@@ -1,4 +1,11 @@
-import type { HomeToday } from "../features/core-loop/types";
+import type {
+  DailyPlan,
+  DailyPlanTask,
+  FocusSession,
+  HomeToday,
+  RecoveryCard,
+  TodayFocusSessions,
+} from "../features/core-loop/types";
 import type { BehaviorProfile } from "../features/onboarding/types";
 
 export function createBehaviorProfileFixture(
@@ -19,7 +26,14 @@ export function createBehaviorProfileFixture(
 
 export function createHomeTodayFixture(
   override: Partial<HomeToday> = {},
-): HomeToday {
+): HomeToday & {
+  activeFocusSession: FocusSession | null;
+  behaviorProfile: BehaviorProfile | null;
+  focusSessions: TodayFocusSessions;
+  morningTasks: DailyPlanTask[];
+  recoveryCard: RecoveryCard;
+  todayDailyPlan: DailyPlan | null;
+} {
   return {
     activeFocusSession: null,
     behaviorProfile: createBehaviorProfileFixture(),
