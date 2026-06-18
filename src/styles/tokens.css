@@ -1,7 +1,8 @@
 @font-face {
   font-family: "BMJUA";
-  src: url("../assets/fonts/BMJUA_ttf.ttf") format("truetype");
+  src: url("../assets/fonts/BMJUA_latin.woff2") format("woff2");
   font-display: swap;
+  unicode-range: U+0020-007E;
 }
 
 :root {
@@ -55,7 +56,8 @@
   --radius-organic: 32px 20px 28px 22px;
   --radius-pill: 9999px;
   --radius-full: 9999px;
-  --font-family-sans: "BMJUA", Pretendard, Inter, system-ui, "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-family-sans: Pretendard, Inter, system-ui, "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-family-display: "BMJUA", var(--font-family-sans);
   --font-family-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Consolas, monospace;
   --font-size-display-lg: 2.5rem;
   --font-size-title: 1.125rem;
