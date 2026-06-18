@@ -18,10 +18,10 @@ type AccountabilityState = {
   watchingRelations: AccountabilityRelation[];
 };
 
-function authenticate() {
+function authenticate(path = "/accountability") {
   window.localStorage.setItem("movra.accessToken", "access-token");
   window.localStorage.setItem("movra.refreshToken", "refresh-token");
-  window.history.pushState({}, "", "/accountability");
+  window.history.pushState({}, "", path);
 }
 
 function createRelation(
@@ -86,8 +86,8 @@ function setupAccountabilityHandlers(
     }) => {
       const body = (await request.json()) as { targets: MonitoringTarget[] };
       state.subjectRelation = createRelation({
-        allowedTargets: body.targets,
         accountabilityRelationId: "relation-created",
+        allowedTargets: body.targets,
       });
       state.inviteStatus = createInviteStatus({
         inviteCode: "CODE15",
@@ -187,7 +187,10 @@ function setupAccountabilityHandlers(
     http.get(
       "http://localhost:8080/accountability-relations/watcher/top-picks",
       () =>
-        HttpResponse.json({ message: "Monitoring target not allowed" }, { status: 403 }),
+        HttpResponse.json(
+          { message: "Monitoring target not allowed" },
+          { status: 403 },
+        ),
     ),
     http.post("http://localhost:8080/analytics/events", () =>
       HttpResponse.json({
@@ -203,7 +206,7 @@ function setupAccountabilityHandlers(
 }
 
 describe("AccountabilityPage", () => {
-  it("creates a relation from an empty state and shows the invite code", async () => {
+  it("routes overview CTA to sharing and opens the invite-code modal", async () => {
     const user = userEvent.setup();
     setupAccountabilityHandlers();
     authenticate();
@@ -211,25 +214,109 @@ describe("AccountabilityPage", () => {
     render(<App />);
 
     expect(
-      await screen.findByRole(
-        "heading",
-        { name: "친구 감시" },
-        { timeout: 5000 },
+      await screen.findByRole("heading", { name: "친구 동행" }, { timeout: 5000 }),
+    ).toBeInTheDocument();
+
+    await user.click(screen.getByRole("link", { name: "내 진행 공유 시작" }));
+    expect(window.location.pathname).toBe("/accountability/share");
+    expect(
+      await screen.findByRole("heading", { name: "공개 범위" }),
+    ).toBeInTheDocument();
+
+    await user.click(
+      within(screen.getByRole("navigation", { name: "친구 동행 화면" })).getByRole(
+        "link",
+        { name: "홈" },
+      ),
+    );
+    await user.click(screen.getByRole("button", { name: "친구 코드 입력" }));
+    expect(window.location.pathname).toBe("/accountability");
+    const dialog = await screen.findByRole("dialog", { name: "친구 코드 입력" });
+    expect(dialog).toBeInTheDocument();
+    expect(
+      within(dialog).getByText(
+        "이 코드를 입력하면 내가 감시자가 되어 친구가 허용한 진행 요약을 볼 수 있어요.",
       ),
     ).toBeInTheDocument();
-    await user.click(screen.getByLabelText("TopPick"));
-    await user.click(screen.getByRole("button", { name: "공유 관계 만들기" }));
+  });
+
+  it("hides the code input CTA after a watching relation exists", async () => {
+    setupAccountabilityHandlers({
+      watchingRelations: [
+        createRelation({
+          accountabilityRelationId: "relation-watching",
+          allowedTargets: ["FOCUS_SESSION", "TOP_PICKS"],
+          subjectUserId: "friend-user",
+          watcherConnected: true,
+          watcherUserId: "current-user",
+        }),
+      ],
+    });
+    authenticate();
+
+    render(<App />);
 
     expect(
-      await screen.findByText("공유 관계를 만들었어요. 초대 코드를 확인해 주세요."),
+      await screen.findByRole("heading", { name: "친구 동행" }, { timeout: 5000 }),
     ).toBeInTheDocument();
-    expect(await screen.findByText("CODE15")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "친구 진행 보기" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "친구 코드 입력" })).toBeNull();
+  });
+
+  it("opens invite-code management from the overview", async () => {
+    const user = userEvent.setup();
+    setupAccountabilityHandlers({
+      inviteStatus: createInviteStatus({ inviteCode: "CODE15" }),
+      subjectRelation: createRelation({
+        accountabilityRelationId: "relation-created",
+        allowedTargets: ["FOCUS_SESSION", "TOP_PICKS"],
+      }),
+    });
+    authenticate();
+
+    render(<App />);
+
+    expect(
+      await screen.findByRole("heading", { name: "친구 동행" }, { timeout: 5000 }),
+    ).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "초대 코드 조회/생성" }));
+
+    const dialog = await screen.findByRole("dialog", {
+      name: "초대 코드 조회/생성",
+    });
+    expect(within(dialog).getByText("CODE15")).toBeInTheDocument();
     expect(screen.getByText("집중 기록, TopPick")).toBeInTheDocument();
+
+    await user.click(
+      within(dialog).getByRole("button", { name: "초대 코드 재생성" }),
+    );
+    expect(await within(dialog).findByText("NEWCODE15")).toBeInTheDocument();
+  });
+
+  it("creates a relation from the share page without showing invite-code controls", async () => {
+    const user = userEvent.setup();
+    setupAccountabilityHandlers();
+    authenticate("/accountability/share");
+
+    render(<App />);
+
+    expect(
+      await screen.findByRole("heading", { name: "친구 동행" }, { timeout: 5000 }),
+    ).toBeInTheDocument();
+    await user.click(screen.getByLabelText(/TopPick/));
+    await user.click(screen.getByRole("button", { name: "공유 시작" }));
+
+    expect(
+      await screen.findByText("공유 관계를 만들었어요. 홈에서 초대 코드를 확인해 주세요."),
+    ).toBeInTheDocument();
+    expect(screen.getByText("집중 기록, TopPick")).toBeInTheDocument();
+    expect(screen.queryByText("CODE15")).toBeNull();
+    expect(screen.queryByRole("button", { name: "초대 코드 조회/생성" })).toBeNull();
     expect(screen.queryByText("relation-created")).toBeNull();
     expect(screen.queryByText("subject-user")).toBeNull();
   });
 
-  it("keeps the join success UI when accountability analytics fails", async () => {
+  it("keeps the join success UI and moves to watch when analytics fails", async () => {
     const user = userEvent.setup();
     setupAccountabilityHandlers();
     server.use(
@@ -237,19 +324,44 @@ describe("AccountabilityPage", () => {
         HttpResponse.json({ message: "analytics failed" }, { status: 500 }),
       ),
     );
-    authenticate();
+    authenticate("/accountability/join");
 
     render(<App />);
 
-    await screen.findByRole("heading", { name: "친구 감시" });
-    await user.type(screen.getByLabelText("친구 초대 코드"), "FRIEND15");
-    await user.click(screen.getByRole("button", { name: "코드로 참여" }));
+    await screen.findByRole("heading", { name: "친구 동행" });
+    const dialog = await screen.findByRole("dialog", { name: "친구 코드 입력" });
+    await user.type(within(dialog).getByLabelText("친구 초대 코드"), "FRIEND15");
+    await user.click(within(dialog).getByRole("button", { name: "코드로 참여" }));
 
     expect(
-      await screen.findByText("친구 감시 참여가 완료됐어요."),
+      await screen.findByText("친구 동행 참여가 완료됐어요."),
     ).toBeInTheDocument();
+    await waitFor(() =>
+      expect(window.location.pathname).toBe("/accountability/watch"),
+    );
     expect(await screen.findByText("연결된 친구 1")).toBeInTheDocument();
     expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  it("shows empty and invalid code states before or after join submission", async () => {
+    const user = userEvent.setup();
+    setupAccountabilityHandlers();
+    authenticate("/accountability/join");
+
+    render(<App />);
+
+    await screen.findByRole("heading", { name: "친구 동행" });
+    const dialog = await screen.findByRole("dialog", { name: "친구 코드 입력" });
+    await user.click(within(dialog).getByRole("button", { name: "코드로 참여" }));
+
+    expect(
+      await within(dialog).findByText("친구 초대 코드를 입력해 주세요."),
+    ).toBeInTheDocument();
+
+    await user.type(within(dialog).getByLabelText("친구 초대 코드"), "WRONG");
+    await user.click(within(dialog).getByRole("button", { name: "코드로 참여" }));
+
+    expect(await within(dialog).findByText("Invalid invite code")).toBeInTheDocument();
   });
 
   it("updates visibility and disconnects watcher and watching relations", async () => {
@@ -273,28 +385,28 @@ describe("AccountabilityPage", () => {
         }),
       ],
     });
-    authenticate();
+    authenticate("/accountability/share");
 
     render(<App />);
 
-    await screen.findByRole("heading", { name: "친구 감시" });
-    await user.click(screen.getByLabelText("TopPick"));
-    await user.click(screen.getByRole("button", { name: "공개 범위 수정" }));
+    await screen.findByRole("heading", { name: "친구 동행" });
+    await user.click(screen.getByLabelText(/TopPick/));
+    await user.click(screen.getByRole("button", { name: "공개 범위 저장" }));
 
     expect(await screen.findByText("공개 범위를 수정했어요.")).toBeInTheDocument();
     expect(screen.getByText("집중 기록, TopPick")).toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: "연결된 친구 해제" }));
+    await user.click(screen.getByRole("link", { name: "홈" }));
+    await user.click(screen.getByRole("button", { name: "보는 친구 해제" }));
     expect(await screen.findByText("연결된 친구를 해제했어요.")).toBeInTheDocument();
     await waitFor(() =>
-      expect(screen.getAllByText("친구 연결 대기 중").length).toBeGreaterThan(0),
+      expect(screen.getAllByText("초대 대기").length).toBeGreaterThan(0),
     );
 
-    await user.click(screen.getByRole("button", { name: "보는 관계 해제" }));
-    expect(
-      await screen.findByText("보고 있던 친구 연결을 해제했어요."),
-    ).toBeInTheDocument();
-    expect(await screen.findByText("보고 있는 친구가 없습니다.")).toBeInTheDocument();
+    await user.click(screen.getByRole("link", { name: /친구 보기/ }));
+    await user.click(screen.getByRole("button", { name: "해제" }));
+    expect(await screen.findByText("보는 관계를 해제했어요.")).toBeInTheDocument();
+    expect(await screen.findByText("아직 연결된 친구가 없어요.")).toBeInTheDocument();
   });
 
   it("disables summary targets that the friend did not allow", async () => {
@@ -309,11 +421,11 @@ describe("AccountabilityPage", () => {
         }),
       ],
     });
-    authenticate();
+    authenticate("/accountability/watch");
 
     render(<App />);
 
-    await screen.findByRole("heading", { name: "친구 감시" });
+    await screen.findByRole("heading", { name: "친구 동행" });
     const targetTabs = screen.getByRole("group", { name: "요약 대상" });
     expect(
       within(targetTabs).getByRole("button", { name: "TopPick" }),
@@ -321,10 +433,38 @@ describe("AccountabilityPage", () => {
     expect(
       within(targetTabs).getByRole("button", { name: "시간표" }),
     ).toBeDisabled();
+    expect(
+      screen.getByText("미공개 항목"),
+    ).toBeInTheDocument();
+  });
+
+  it("loads the allowed daily summary when the watch page opens", async () => {
+    setupAccountabilityHandlers({
+      summaryResponse: {
+        targetDate: "2026-04-24",
+        totalFocusSeconds: 2400,
+      },
+      watchingRelations: [
+        createRelation({
+          accountabilityRelationId: "relation-watching",
+          allowedTargets: ["FOCUS_SESSION"],
+          subjectUserId: "friend-user",
+          watcherConnected: true,
+          watcherUserId: "current-user",
+        }),
+      ],
+    });
+    authenticate("/accountability/watch");
+
+    render(<App />);
+
+    await screen.findByRole("heading", { name: "친구 동행" });
+
+    expect(await screen.findByText("총 집중 시간(초)")).toBeInTheDocument();
+    expect(screen.getByText("2400")).toBeInTheDocument();
   });
 
   it("shows an empty state when the summary endpoint returns 204 No Content", async () => {
-    const user = userEvent.setup();
     setupAccountabilityHandlers({
       summaryResponse: "empty",
       watchingRelations: [
@@ -337,12 +477,11 @@ describe("AccountabilityPage", () => {
         }),
       ],
     });
-    authenticate();
+    authenticate("/accountability/watch");
 
     render(<App />);
 
-    await screen.findByRole("heading", { name: "친구 감시" });
-    await user.click(screen.getByRole("button", { name: "요약 조회" }));
+    await screen.findByRole("heading", { name: "친구 동행" });
 
     expect(await screen.findByText("요약 데이터가 없습니다.")).toBeInTheDocument();
   });
@@ -371,11 +510,11 @@ describe("AccountabilityPage", () => {
         },
       ),
     );
-    authenticate();
+    authenticate("/accountability/watch");
 
     render(<App />);
 
-    await screen.findByRole("heading", { name: "친구 감시" });
+    await screen.findByRole("heading", { name: "친구 동행" });
     await user.click(screen.getByRole("button", { name: "기간" }));
     await user.clear(screen.getByLabelText("시작 날짜"));
     await user.type(screen.getByLabelText("시작 날짜"), "2026-04-25");
@@ -390,7 +529,6 @@ describe("AccountabilityPage", () => {
   });
 
   it("hides identifier fields from generic summary responses", async () => {
-    const user = userEvent.setup();
     setupAccountabilityHandlers({
       summaryResponse: {
         days: [
@@ -399,11 +537,11 @@ describe("AccountabilityPage", () => {
             totalFocusSeconds: 1200,
           },
         ],
+        targetDate: "2026-04-24",
         task: {
           content: "수학 오답 정리",
           taskId: "task-secret",
         },
-        targetDate: "2026-04-24",
       },
       watchingRelations: [
         createRelation({
@@ -415,12 +553,11 @@ describe("AccountabilityPage", () => {
         }),
       ],
     });
-    authenticate();
+    authenticate("/accountability/watch");
 
     render(<App />);
 
-    await screen.findByRole("heading", { name: "친구 감시" });
-    await user.click(screen.getByRole("button", { name: "요약 조회" }));
+    await screen.findByRole("heading", { name: "친구 동행" });
 
     expect(await screen.findByText(/수학 오답 정리/)).toBeInTheDocument();
     expect(screen.getByText(/1200/)).toBeInTheDocument();

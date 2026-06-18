@@ -16,6 +16,29 @@ describe("accountability api", () => {
     vi.restoreAllMocks();
   });
 
+  it("normalizes direct array summary responses into displayable day summaries", async () => {
+    const summaryDay = {
+      targetDate: "2026-04-24",
+      totalFocusSeconds: 1200,
+    };
+    const fetchMock = vi.fn().mockResolvedValueOnce(
+      new Response(JSON.stringify([summaryDay]), {
+        headers: { "content-type": "application/json" },
+        status: 200,
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(
+      getWatcherRangeSummary({
+        from: "2026-04-24",
+        target: "focus-sessions",
+        to: "2026-04-24",
+        token: "access-token",
+      }),
+    ).resolves.toEqual({ days: [summaryDay] });
+  });
+
   it("calls the documented Accountability endpoints with auth and documented bodies", async () => {
     const friendsResponse = {
       watchedByFriends: [

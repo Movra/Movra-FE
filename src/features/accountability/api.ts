@@ -10,6 +10,7 @@ import type {
 } from "./types";
 
 type AuthenticatedRequest = {
+  signal?: AbortSignal;
   token: string;
 };
 
@@ -49,6 +50,10 @@ function normalizeWatcherSummary(value: unknown) {
     return null;
   }
 
+  if (Array.isArray(value)) {
+    return value.length > 0 ? { days: value } : null;
+  }
+
   return isRecord(value) ? value : null;
 }
 
@@ -84,15 +89,16 @@ export function reissueInviteCode({ token }: AuthenticatedRequest) {
   );
 }
 
-export function getInviteCodeStatus({ token }: AuthenticatedRequest) {
+export function getInviteCodeStatus({ signal, token }: AuthenticatedRequest) {
   return apiRequest<InviteCodeStatus>(
     "/accountability-relations/invite-code/status",
-    { token },
+    { signal, token },
   );
 }
 
-export function getAccountabilityFriends({ token }: AuthenticatedRequest) {
+export function getAccountabilityFriends({ signal, token }: AuthenticatedRequest) {
   return apiRequest<AccountabilityFriends>("/accountability-relations/friends", {
+    signal,
     token,
   });
 }
@@ -124,12 +130,13 @@ export function disconnectWatching({ token }: AuthenticatedRequest) {
 
 export async function getWatcherDateSummary({
   date,
+  signal,
   target,
   token,
 }: DateSummaryRequest) {
   const response = await apiRequest<unknown>(
     `/accountability-relations/watcher/${target}?${dateQuery(date)}`,
-    { token },
+    { signal, token },
   );
 
   return normalizeWatcherSummary(response);
@@ -137,13 +144,14 @@ export async function getWatcherDateSummary({
 
 export async function getWatcherRangeSummary({
   from,
+  signal,
   target,
   to,
   token,
 }: RangeSummaryRequest) {
   const response = await apiRequest<unknown>(
     `/accountability-relations/watcher/${target}/range?${rangeQuery(from, to)}`,
-    { token },
+    { signal, token },
   );
 
   return normalizeWatcherSummary(response);

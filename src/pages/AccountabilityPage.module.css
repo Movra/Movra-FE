@@ -7,13 +7,19 @@
   overflow: hidden;
   grid-template-columns: 232px minmax(0, 1fr);
   color: var(--color-ink);
-  background: linear-gradient(180deg, var(--color-canvas) 0%, var(--color-canvas-soft) 100%);
+  background:
+    radial-gradient(circle at 88% 6%, rgba(84, 200, 121, 0.1), transparent 30%),
+    linear-gradient(135deg, #ffffff 0%, #f8fbf5 54%, #f1f7ee 100%);
+  font-family: var(--font-family-sans);
 }
 
 .contentShell {
-  width: min(100%, 1480px);
+  display: grid;
+  width: min(100%, 1180px);
   min-width: 0;
   min-height: 0;
+  align-content: start;
+  gap: 20px;
   margin: 0 auto;
   overflow-x: hidden;
   overflow-y: auto;
@@ -21,292 +27,579 @@
 }
 
 .pageHeader {
-  display: flex;
+  margin-bottom: 0;
+}
+
+/* 라우트 탭 — 알약형 세그먼트 */
+.routeTabs {
+  display: inline-flex;
   min-width: 0;
-  align-items: end;
-  justify-content: space-between;
-  gap: 20px;
-  margin-bottom: 18px;
-}
-
-.pageHeader > div:first-child {
-  min-width: 0;
-}
-
-.pageHeader p,
-.panelHeader p {
-  margin: 0;
-  color: var(--color-primary-active);
-  font-size: var(--font-size-caption);
-}
-
-.pageHeader h1 {
-  margin: 2px 0 6px;
-  font-size: clamp(2rem, 5vw, 4.1rem);
-  font-weight: 500;
-  line-height: 1;
-}
-
-.pageHeader span {
-  color: var(--color-body);
-  font-size: var(--font-size-body);
-}
-
-.headerStats {
-  display: grid;
-  min-width: 300px;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
-}
-
-.headerStats article,
-.panel,
-.summaryPanel {
-  min-width: 0;
-  border: 1px solid rgba(220, 231, 216, 0.92);
-  border-radius: 8px;
+  gap: 4px;
+  width: fit-content;
+  max-width: 100%;
+  padding: 4px;
+  border: 1px solid var(--color-hairline-soft);
+  border-radius: var(--radius-pill);
   background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 8px 20px rgba(31, 42, 33, 0.04);
+  overflow-x: auto;
 }
 
-.headerStats article {
-  padding: 14px 16px;
-}
-
-.headerStats span,
-.headerStats strong {
-  display: block;
-  overflow: hidden;
-  text-overflow: ellipsis;
+.routeTab,
+.activeRouteTab {
+  display: inline-flex;
+  min-height: 38px;
+  align-items: center;
+  padding: 0 18px;
+  border-radius: var(--radius-pill);
+  color: var(--color-muted);
+  font-size: var(--font-size-body-sm);
+  font-weight: 500;
+  text-decoration: none;
   white-space: nowrap;
 }
 
-.headerStats span {
-  color: var(--color-muted);
-  font-size: var(--font-size-caption);
+.routeTab:hover,
+.routeTab:focus-visible {
+  color: var(--color-primary-active);
+  background: var(--color-primary-pale);
 }
 
-.headerStats strong {
-  font-size: 1.1rem;
-  font-weight: 500;
+.activeRouteTab {
+  color: var(--color-primary-active);
+  background: var(--color-primary-soft);
 }
 
-.accountabilityGrid {
+.pageBody,
+.homeView,
+.shareView,
+.watchView {
   display: grid;
   min-width: 0;
-  grid-template-columns: minmax(300px, 0.95fr) minmax(320px, 1.05fr);
+}
+
+/* 공통 카드 */
+.homeLead,
+.homeStatus,
+.shareForm,
+.watchEmpty,
+.watchRail,
+.summaryArea {
+  min-width: 0;
+  border: 1px solid rgba(220, 231, 216, 0.92);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 14px 30px rgba(31, 42, 33, 0.05);
+}
+
+.homeView {
   gap: 16px;
-  align-items: start;
 }
 
-.panel,
-.summaryPanel {
-  padding: 18px;
+/* 히어로 카드 */
+.homeLead {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 132px;
+  gap: 22px;
+  align-items: center;
+  padding: 26px 28px;
+  background:
+    radial-gradient(circle at 92% 14%, rgba(84, 200, 121, 0.16), transparent 26%),
+    linear-gradient(120deg, rgba(255, 255, 255, 0.98), rgba(239, 249, 243, 0.94));
 }
 
-.summaryPanel {
-  grid-column: 1 / -1;
-}
-
-.panelHeader {
-  display: flex;
+.homeLeadCopy {
+  display: grid;
   min-width: 0;
-  align-items: start;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 14px;
+  gap: 14px;
 }
 
-.panelHeader h2 {
-  margin: 2px 0 0;
-  font-size: var(--font-size-title);
+.homeLeadArt {
+  width: 124px;
+  height: 124px;
+  justify-self: center;
+  object-fit: contain;
+  filter: drop-shadow(0 14px 22px rgba(47, 122, 71, 0.16));
+}
+
+.sectionLabel {
+  color: var(--color-primary-active);
+  font-size: var(--font-size-caption);
   font-weight: 500;
 }
 
-.statusBadge {
-  flex: 0 0 auto;
-  padding: 6px 10px;
-  border-radius: var(--radius-pill);
-  color: #21516a;
-  background: #e0f1f7;
-  font-size: var(--font-size-caption);
+.homeLead h2,
+.viewHeader h2,
+.summaryHeader h2 {
+  margin: 0;
+  color: var(--color-ink);
+  font-weight: 500;
+  line-height: 1.25;
 }
 
-.form,
-.summaryForm {
-  display: grid;
-  gap: 12px;
+.homeLead h2 {
+  max-width: 520px;
+  font-size: clamp(1.6rem, 2.4vw, 2.1rem);
 }
 
-.form label,
-.summaryForm label {
-  display: grid;
-  gap: 6px;
+.homeLead p {
+  max-width: 480px;
+  margin: -2px 0 0;
   color: var(--color-body);
   font-size: var(--font-size-body-sm);
+  line-height: 1.6;
 }
 
-.form input:not([type="checkbox"]),
-.summaryForm input {
-  width: 100%;
-  min-height: 42px;
-  border: 1px solid var(--color-hairline);
-  border-radius: 8px;
-  padding: 0 12px;
+.homeHighlights {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 2px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.homeHighlights li {
+  min-height: 30px;
+  padding: 6px 12px;
+  border-radius: var(--radius-pill);
+  color: var(--color-on-soft-green);
+  background: var(--color-primary-pale);
+  font-size: var(--font-size-caption);
+}
+
+.viewHeader h2,
+.summaryHeader h2 {
+  font-size: var(--font-size-title);
+}
+
+.homeActions,
+.actionRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.homeActions {
+  margin-top: 4px;
+}
+
+/* 상태 카드 */
+.homeStatus {
+  display: grid;
+  min-width: 0;
+  gap: 14px;
+  padding: 22px 24px;
+}
+
+.homeStatus h3 {
+  margin: 0;
   color: var(--color-ink);
+  font-size: var(--font-size-body);
+  font-weight: 500;
+}
+
+.statusTable,
+.statusInline,
+.summaryList {
+  display: grid;
+  min-width: 0;
+  margin: 0;
+}
+
+.statusTable {
+  gap: 10px;
+}
+
+.statusTable div {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: 168px minmax(0, 1fr) auto;
+  gap: 16px;
+  align-items: center;
+  padding: 14px 16px;
+  border-radius: var(--radius-md);
   background: var(--color-canvas-soft);
 }
 
-.checkboxGroup {
-  display: grid;
-  gap: 8px;
-  margin: 0;
-  padding: 0;
-  border: 0;
-}
-
-.checkboxGroup legend {
-  margin-bottom: 4px;
-  color: var(--color-body);
-  font-size: var(--font-size-body-sm);
-}
-
-.checkboxGroup label {
-  display: flex;
-  min-height: 40px;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 10px;
-  border: 1px solid var(--color-hairline);
-  border-radius: 8px;
-  background: var(--color-surface-card);
-}
-
-.checkboxGroup input {
-  width: 18px;
-  height: 18px;
-  accent-color: var(--color-primary);
-}
-
-.primaryButton,
-.secondaryButton,
-.actionRow button,
-.relationList button,
-.targetTabs button,
-.segmentedControl button,
-.centerState button {
-  min-height: 40px;
-  border-radius: 8px;
-  cursor: pointer;
-}
-
-.primaryButton {
-  border: 0;
-  color: var(--color-on-primary);
-  background: var(--color-primary);
-}
-
-.secondaryButton,
-.actionRow button,
-.relationList button,
-.targetTabs button,
-.segmentedControl button,
-.centerState button {
-  border: 1px solid var(--color-hairline);
-  color: var(--color-ink);
-  background: var(--color-surface-card);
-}
-
-.primaryButton:disabled,
-.secondaryButton:disabled,
-.actionRow button:disabled,
-.relationList button:disabled,
-.targetTabs button:disabled {
-  cursor: not-allowed;
-  opacity: 0.62;
-}
-
-.inviteBox {
-  display: grid;
-  gap: 10px;
-  margin-top: 14px;
-  padding: 12px;
-  border-radius: 8px;
-  color: #163b2a;
-  background: #dff3e8;
-}
-
-.inviteBox dl,
-.summaryList {
-  display: grid;
-  gap: 8px;
-  margin: 0;
-}
-
-.inviteBox div,
-.summaryList div {
-  min-width: 0;
-}
-
-.inviteBox dt,
-.inviteBox dd,
+.statusTable dt,
+.statusTable dd,
+.statusInline dt,
+.statusInline dd,
 .summaryList dt,
 .summaryList dd {
   margin: 0;
 }
 
-.inviteBox dt,
+.statusTable dt,
+.statusInline dt,
+.codeLine span,
+.codeLine small,
+.friendRows span,
+.summaryHeader p,
 .summaryList dt {
   color: var(--color-muted);
   font-size: var(--font-size-caption);
 }
 
-.inviteBox dd,
+.statusTable dd,
+.statusInline dd,
 .summaryList dd {
   overflow-wrap: anywhere;
+  color: var(--color-ink);
+  font-size: var(--font-size-body-sm);
+  font-weight: 500;
+}
+
+/* 버튼 */
+.primaryButton,
+.secondaryButton,
+.primaryButtonLink,
+.actionRow button,
+.statusTable button,
+.friendRows button,
+.targetTabs button,
+.segmentedControl button,
+.modalHeader button,
+.centerState button {
+  display: inline-flex;
+  min-height: 42px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  padding: 0 16px;
+  font: inherit;
+  font-size: var(--font-size-body-sm);
+  font-weight: 500;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.primaryButton,
+.primaryButtonLink {
+  border: 0;
+  color: var(--color-on-primary);
+  background: var(--color-primary);
+}
+
+.primaryButton:hover,
+.primaryButton:focus-visible,
+.primaryButtonLink:hover,
+.primaryButtonLink:focus-visible {
+  background: var(--color-primary-hover);
+}
+
+.secondaryButton,
+.actionRow button,
+.statusTable button,
+.friendRows button,
+.targetTabs button,
+.segmentedControl button,
+.modalHeader button,
+.centerState button {
+  border: 1px solid var(--color-hairline-soft);
+  color: var(--color-body);
+  background: rgba(255, 255, 255, 0.86);
+}
+
+.secondaryButton:hover,
+.secondaryButton:focus-visible,
+.actionRow button:hover,
+.actionRow button:focus-visible,
+.statusTable button:hover,
+.statusTable button:focus-visible,
+.friendRows button:hover,
+.friendRows button:focus-visible,
+.modalHeader button:hover,
+.modalHeader button:focus-visible {
+  border-color: var(--color-hairline-strong);
+  color: var(--color-primary-active);
+  background: var(--color-primary-pale);
+}
+
+.statusTable button {
+  min-height: 36px;
+  padding: 0 12px;
+}
+
+/* share / watch */
+.shareView,
+.watchView {
+  gap: 16px;
+}
+
+.viewHeader {
+  display: flex;
+  min-width: 0;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 2px 4px;
+}
+
+.viewHeader > div,
+.summaryHeader > div {
+  display: grid;
+  min-width: 0;
+  gap: 5px;
+}
+
+.statusInline {
+  grid-template-columns: repeat(2, minmax(120px, auto));
+  gap: 18px;
+  justify-content: end;
+}
+
+.statusInline div {
+  display: grid;
+  gap: 5px;
+  text-align: right;
+}
+
+.shareGrid {
+  display: grid;
+  min-width: 0;
+}
+
+.shareForm,
+.summaryArea {
+  display: grid;
+  min-width: 0;
+  align-content: start;
+  gap: 18px;
+}
+
+.shareForm {
+  width: 100%;
+  justify-items: stretch;
+  padding: 24px;
+}
+
+.scopeList {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.scopeList legend {
+  margin-bottom: 12px;
+  padding: 0;
+  color: var(--color-body);
   font-size: var(--font-size-body-sm);
 }
 
-.actionRow {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
-}
-
-.relationList {
-  display: grid;
-  gap: 10px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.relationList li {
+.scopeRow {
   display: grid;
   min-width: 0;
+  min-height: 56px;
   grid-template-columns: minmax(0, 1fr) auto;
-  gap: 12px;
+  gap: 14px;
   align-items: center;
-  padding: 12px;
+  padding: 0 14px;
   border: 1px solid var(--color-hairline-soft);
-  border-radius: 8px;
+  border-radius: var(--radius-md);
+  color: var(--color-ink);
+  font-size: var(--font-size-body-sm);
+  font-weight: 500;
 }
 
-.relationList li > div {
-  display: grid;
-  min-width: 0;
-  gap: 4px;
+.scopeRow + .scopeRow {
+  margin-top: 8px;
 }
 
-.relationList strong,
-.relationList span {
+.scopeRow span {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.relationList span {
+.scopeRow input {
+  width: 20px;
+  height: 20px;
+  accent-color: var(--color-primary);
+}
+
+.codeLine {
+  display: grid;
+  min-width: 0;
+  gap: 4px;
+  padding: 16px;
+  border-radius: var(--radius-md);
+  background: var(--color-primary-pale);
+}
+
+.codeLine strong {
+  overflow-wrap: anywhere;
+  color: #123f28;
+  font-size: 1.75rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+
+.connectionCount {
+  min-height: 32px;
+  padding: 7px 12px;
+  border-radius: var(--radius-pill);
+  color: var(--color-on-soft-green);
+  background: var(--color-primary-pale);
+  font-size: var(--font-size-caption);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+/* watch */
+.watchEmpty {
+  display: grid;
+  min-width: 0;
+  justify-items: center;
+  gap: 12px;
+  padding: 48px 24px;
+  text-align: center;
+}
+
+.watchEmpty > div {
+  display: grid;
+  gap: 6px;
+}
+
+.watchEmpty strong {
+  color: var(--color-ink);
+  font-size: var(--font-size-title);
+  font-weight: 500;
+}
+
+.watchEmpty p {
+  max-width: 360px;
+  margin: 0;
+  color: var(--color-body);
+  font-size: var(--font-size-body-sm);
+  line-height: 1.55;
+}
+
+.watchWorkspace {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: minmax(220px, 280px) minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.watchRail {
+  display: grid;
+  min-width: 0;
+  align-content: start;
+  gap: 14px;
+  padding: 22px 20px;
+}
+
+.railHeader {
+  display: grid;
+  min-width: 0;
+  gap: 5px;
+}
+
+.railHeader h3 {
+  margin: 0;
+  color: var(--color-ink);
+  font-size: var(--font-size-body);
+  font-weight: 500;
+}
+
+.friendRows {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.friendRows li {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  background: var(--color-canvas-soft);
+}
+
+.friendRows li > div {
+  display: grid;
+  min-width: 0;
+  gap: 4px;
+}
+
+.friendRows strong,
+.friendRows span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.friendRows strong {
+  color: var(--color-ink);
+  font-size: var(--font-size-body-sm);
+  font-weight: 500;
+}
+
+.friendRows button {
+  min-height: 36px;
+  padding: 0 12px;
+}
+
+.summaryArea {
+  padding: 22px 24px;
+}
+
+.summaryHeader {
+  display: flex;
+  min-width: 0;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.summaryHeader p {
+  margin: 0;
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+  color: var(--color-warning);
+  background: rgba(180, 122, 28, 0.12);
+}
+
+.allowedStrip {
+  display: grid;
+  min-width: 0;
+  min-height: 46px;
+  grid-template-columns: 112px minmax(0, 1fr);
+  gap: 16px;
+  align-items: center;
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  background: var(--color-canvas-soft);
+}
+
+.allowedStrip span {
   color: var(--color-muted);
   font-size: var(--font-size-caption);
+}
+
+.allowedStrip strong {
+  overflow-wrap: anywhere;
+  color: var(--color-ink);
+  font-size: var(--font-size-body-sm);
+  font-weight: 500;
+}
+
+.summaryControls {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: minmax(250px, 1.2fr) minmax(132px, 0.58fr) minmax(190px, 0.74fr) auto;
+  gap: 12px;
+  align-items: end;
 }
 
 .targetTabs,
@@ -319,12 +612,33 @@
 
 .targetTabs {
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  margin-bottom: 12px;
 }
 
 .segmentedControl,
 .dateRange {
   grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.targetTabs button,
+.segmentedControl button {
+  min-width: 0;
+  padding-inline: 10px;
+}
+
+.targetTabs button {
+  display: grid;
+  min-height: 56px;
+  align-content: center;
+  justify-items: start;
+  gap: 3px;
+  text-align: left;
+}
+
+.targetTabs button small {
+  color: currentColor;
+  font-size: 0.72rem;
+  font-weight: 400;
+  opacity: 0.72;
 }
 
 .targetTabs button[aria-pressed="true"],
@@ -334,34 +648,93 @@
   background: var(--color-primary);
 }
 
-.summaryResult {
-  min-height: 80px;
-  margin-top: 14px;
-  padding: 14px;
-  border-radius: 8px;
-  background: var(--color-canvas-soft);
-}
-
-.emptyText {
-  margin: 0;
+.summaryControls label,
+.form label {
+  display: grid;
+  min-width: 0;
+  gap: 7px;
   color: var(--color-body);
   font-size: var(--font-size-body-sm);
 }
 
+.summaryControls input,
+.form input:not([type="checkbox"]) {
+  width: 100%;
+  min-height: 44px;
+  border: 1px solid var(--color-hairline);
+  border-radius: 10px;
+  padding: 0 13px;
+  color: var(--color-ink);
+  background: var(--color-canvas-soft);
+  font: inherit;
+}
+
+.summaryResult {
+  min-height: 150px;
+  padding-top: 18px;
+  border-top: 1px solid var(--color-hairline-soft);
+}
+
+.summaryList {
+  gap: 0;
+}
+
+.summaryList div {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: 140px minmax(0, 1fr);
+  gap: 14px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--color-hairline-soft);
+}
+
+.summaryList div:first-child {
+  padding-top: 0;
+}
+
+.form {
+  display: grid;
+  gap: 14px;
+}
+
+.modalDescription,
+.emptyText {
+  margin: 0;
+  color: var(--color-body);
+  font-size: var(--font-size-body-sm);
+  line-height: 1.5;
+}
+
+.inlineError,
+.error,
+.success {
+  border-radius: 10px;
+  font-size: var(--font-size-body-sm);
+  line-height: 1.45;
+}
+
 .inlineError {
   margin: 0;
-  padding: 10px 12px;
-  border-radius: 8px;
+  padding: 12px 14px;
   color: var(--color-error);
   background: var(--color-error-soft);
 }
 
 .error,
 .success {
-  margin: 0 0 14px;
+  position: fixed;
+  top: 24px;
+  right: 28px;
+  z-index: 90;
+  max-width: min(420px, calc(100vw - 56px));
+  margin: 0;
   padding: 12px 14px;
-  border-radius: 8px;
-  font-size: var(--font-size-body-sm);
+  box-shadow: 0 16px 40px rgba(31, 42, 33, 0.14);
+  opacity: 1;
+  transform: translateY(0);
+  transition:
+    opacity 220ms ease,
+    transform 220ms ease;
 }
 
 .error {
@@ -374,6 +747,22 @@
   background: var(--color-success-soft);
 }
 
+.toastLeaving {
+  opacity: 0;
+  transform: translateY(-6px);
+}
+
+.primaryButton:disabled,
+.secondaryButton:disabled,
+.actionRow button:disabled,
+.statusTable button:disabled,
+.friendRows button:disabled,
+.targetTabs button:disabled,
+.segmentedControl button:disabled {
+  cursor: not-allowed;
+  opacity: 0.62;
+}
+
 .centerState {
   display: grid;
   min-height: min(560px, calc(100vh - 72px));
@@ -384,7 +773,7 @@
   padding: 32px;
   color: var(--color-ink);
   text-align: center;
-  background: var(--color-canvas);
+  background: transparent;
 }
 
 .centerState img {
@@ -407,27 +796,76 @@
   color: var(--color-body);
 }
 
-.centerState button {
-  padding: 0 18px;
-  color: var(--color-on-primary);
-  background: var(--color-primary);
+.modalBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  display: grid;
+  place-items: center;
+  padding: 22px;
+  background: rgba(18, 28, 22, 0.36);
 }
 
+.inviteModal {
+  display: grid;
+  width: min(100%, 480px);
+  gap: 16px;
+  padding: 24px;
+  border: 1px solid rgba(220, 231, 216, 0.96);
+  border-radius: 16px;
+  background: var(--color-surface-card);
+  box-shadow: 0 28px 70px rgba(24, 35, 27, 0.22);
+}
+
+.modalHeader {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.modalHeader h2 {
+  margin: 0;
+  color: var(--color-ink);
+  font-size: var(--font-size-title);
+  font-weight: 500;
+}
+
+.summaryControls input:focus-visible,
 .form input:focus-visible,
-.summaryForm input:focus-visible,
-.checkboxGroup input:focus-visible,
+.scopeRow input:focus-visible,
 .primaryButton:focus-visible,
 .secondaryButton:focus-visible,
+.primaryButtonLink:focus-visible,
+.routeTab:focus-visible,
+.activeRouteTab:focus-visible,
 .actionRow button:focus-visible,
-.relationList button:focus-visible,
+.statusTable button:focus-visible,
+.friendRows button:focus-visible,
 .targetTabs button:focus-visible,
 .segmentedControl button:focus-visible,
+.modalHeader button:focus-visible,
 .centerState button:focus-visible {
   outline: 3px solid var(--color-primary-soft);
   outline-offset: 2px;
 }
 
-@media (max-width: 1020px) {
+@media (max-width: 1180px) {
+  .accountabilityPage {
+    grid-template-columns: 206px minmax(0, 1fr);
+  }
+
+  .contentShell {
+    padding: 20px 16px 28px;
+  }
+
+  .summaryControls {
+    grid-template-columns: minmax(0, 1fr) minmax(150px, 0.5fr);
+  }
+}
+
+@media (max-width: 920px) {
   .accountabilityPage {
     height: auto;
     min-height: 100vh;
@@ -440,33 +878,74 @@
     overflow: visible;
   }
 
-  .pageHeader {
-    align-items: stretch;
-    flex-direction: column;
-  }
-
-  .headerStats,
-  .accountabilityGrid {
-    min-width: 0;
+  .watchWorkspace {
     grid-template-columns: minmax(0, 1fr);
-  }
-
-  .summaryPanel {
-    grid-column: auto;
   }
 }
 
-@media (max-width: 620px) {
-  .contentShell {
-    padding: 18px 14px 24px;
+@media (max-width: 720px) {
+  .homeLead {
+    grid-template-columns: minmax(0, 1fr);
+    padding: 22px;
   }
 
-  .headerStats,
-  .actionRow,
-  .relationList li,
+  .homeLeadArt {
+    grid-row: 1;
+    width: 96px;
+    height: 96px;
+    justify-self: start;
+  }
+
+  .homeLead h2 {
+    font-size: 1.5rem;
+  }
+
+  .viewHeader,
+  .summaryHeader,
+  .statusInline,
+  .summaryControls,
   .targetTabs,
   .segmentedControl,
-  .dateRange {
+  .dateRange,
+  .allowedStrip,
+  .summaryList div,
+  .statusTable div,
+  .friendRows li {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .viewHeader,
+  .summaryHeader {
+    display: grid;
+  }
+
+  .statusInline {
+    justify-content: stretch;
+    gap: 10px;
+  }
+
+  .statusInline div {
+    text-align: left;
+  }
+
+  .homeActions,
+  .actionRow {
+    display: grid;
+  }
+
+  .primaryButton,
+  .secondaryButton,
+  .primaryButtonLink,
+  .actionRow button,
+  .friendRows button {
+    width: 100%;
+  }
+
+  .watchEmpty {
+    padding: 36px 20px;
+  }
+
+  .codeLine strong {
+    font-size: 1.5rem;
   }
 }
