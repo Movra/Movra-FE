@@ -1,9 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import { type FormEvent, memo, useEffect, useMemo, useRef, useState } from "react";
 import { Link, Navigate } from "react-router-dom";
 
-import characterDefault from "../assets/auth/character-default.png";
-import characterRecovery from "../assets/auth/character-recovery.png";
+import characterDefault from "../assets/auth/character-default.webp";
+import characterRecovery from "../assets/auth/character-recovery.webp";
 import { recordAnalyticsEventSafely } from "../features/analytics/api";
 import { useAuth } from "../features/auth/useAuth";
 import { AppSidebar } from "../features/core-loop/AppSidebar";
@@ -199,68 +199,38 @@ function getSortedSessions(sessions: FocusSession[]) {
   );
 }
 
-export function FocusPage() {
-  const { accessToken, logout } = useAuth();
-  const token = accessToken ?? "";
-  const queryClient = useQueryClient();
-  const [selectedFocusMode, setSelectedFocusMode] = useState<FocusMode>(5);
-  const [localFocusStartedAt, setLocalFocusStartedAt] = useState<number | null>(
-    null,
-  );
-  const [actionError, setActionError] = useState<string | null>(null);
-  const [actionNotice, setActionNotice] = useState<string | null>(null);
-  const [recoveryModalOpen, setRecoveryModalOpen] = useState(false);
-  const [recoveryFormOpen, setRecoveryFormOpen] = useState(false);
-  const [dismissedRecoveryDate, setDismissedRecoveryDate] = useState<string | null>(
-    () => readRecoveryDismissedDate(),
-  );
-  const [showTinyWinPrompt, setShowTinyWinPrompt] = useState(false);
-  const [recoveryForm, setRecoveryForm] = useState<RecoveryReflectionForm>({
-    ifCondition: "",
-    thenAction: "",
-    whatBrokeDown: "",
-    whatWentWell: "다시 돌아오려고 앱을 열었습니다.",
-  });
+type FocusTimerStageProps = {
+  activeFocusSession: FocusSession | null;
+  focusSessionsQueriedAt: string;
+  focusing: boolean;
+  localFocusStartedAt: number | null;
+  onFocusModeChange: (focusMode: FocusMode) => void;
+  onStartFocus: () => void;
+  onStopFocus: () => void;
+  selectedFocusMode: FocusMode;
+  startFocusPending: boolean;
+  stopFocusPending: boolean;
+};
+
+const FocusTimerStage = memo(function FocusTimerStage({
+  activeFocusSession,
+  focusSessionsQueriedAt,
+  focusing,
+  localFocusStartedAt,
+  onFocusModeChange,
+  onStartFocus,
+  onStopFocus,
+  selectedFocusMode,
+  startFocusPending,
+  stopFocusPending,
+}: FocusTimerStageProps) {
   const [now, setNow] = useState(() => Date.now());
   const [timerOffsetSeconds, setTimerOffsetSeconds] = useState(0);
   const [timerPaused, setTimerPaused] = useState(false);
   const [timerPausedSeconds, setTimerPausedSeconds] = useState<number | null>(
     null,
   );
-  const recoveryCardViewedRef = useRef(false);
-
-  const homeQuery = useQuery({
-    enabled: Boolean(token),
-    queryFn: () => getHomeToday({ token }),
-    queryKey: homeTodayKey,
-  });
-  const focusSessionsQuery = useQuery({
-    enabled: Boolean(token),
-    queryFn: () => getTodayFocusSessions({ token }),
-    queryKey: focusSessionsTodayKey,
-  });
-  const recoveryCardQuery = useQuery({
-    enabled: Boolean(token),
-    queryFn: () => getRecoveryCard({ token }),
-    queryKey: recoveryCardKey,
-  });
-  const targetDate = homeQuery.data?.targetDate ?? "";
-  const dailyReflectionKey = queryKeys.dailyReflection(targetDate);
-  const dailyReflectionQuery = useQuery({
-    enabled: Boolean(token && targetDate),
-    queryFn: () => getDailyReflection({ targetDate, token }),
-    queryKey: dailyReflectionKey,
-  });
-
-  const focusSessions = focusSessionsQuery.data;
-  const recoveryCard = recoveryCardQuery.data;
-  const savedRecoveryReflection = dailyReflectionQuery.data ?? null;
-  const activeFocusSession = focusSessions
-    ? getActiveFocusSession(focusSessions)
-    : null;
   const localFocusing = localFocusStartedAt !== null;
-  const serverFocusing = Boolean(activeFocusSession ?? focusSessions?.focusing);
-  const focusing = serverFocusing || localFocusing;
   const activeContinuous = localFocusing;
   const selectedPreset = selectedFocusMode === "OPEN" ? 5 : selectedFocusMode;
   const activePreset = activeFocusSession?.presetMinutes ?? selectedPreset;
@@ -273,10 +243,10 @@ export function FocusPage() {
     ? localRawElapsedSeconds
     : activeFocusSession
       ? getElapsedSeconds({
-        now,
-        queriedAt: focusSessions?.queriedAt ?? "",
-        session: activeFocusSession,
-      })
+          now,
+          queriedAt: focusSessionsQueriedAt,
+          session: activeFocusSession,
+        })
       : 0;
   const elapsedSeconds =
     timerPaused && timerPausedSeconds !== null
@@ -304,17 +274,10 @@ export function FocusPage() {
       ? Math.min(100, Math.round((elapsedSeconds / activePresetSeconds) * 100))
       : 0;
   const progressBarWidth = activeContinuous ? 100 : progressValue;
-  const recentSessions = useMemo(
-    () => getSortedSessions(focusSessions?.sessions ?? []).slice(0, 5),
-    [focusSessions?.sessions],
-  );
-  const recoveryDismissedForDate = Boolean(
-    targetDate && dismissedRecoveryDate === targetDate,
-  );
 
   useEffect(() => {
     if (!focusing) {
-      return;
+      return undefined;
     }
 
     const intervalId = window.setInterval(() => setNow(Date.now()), 1000);
@@ -326,6 +289,203 @@ export function FocusPage() {
     setTimerPaused(false);
     setTimerPausedSeconds(null);
   }, [activeFocusSession?.focusSessionId, localFocusStartedAt]);
+
+  function handlePauseTimer() {
+    setTimerPaused(true);
+    setTimerPausedSeconds(elapsedSeconds);
+  }
+
+  function handleResumeTimer() {
+    setTimerOffsetSeconds(
+      Math.max(0, rawElapsedSeconds - (timerPausedSeconds ?? elapsedSeconds)),
+    );
+    setTimerPaused(false);
+    setTimerPausedSeconds(null);
+  }
+
+  function handleResetTimer() {
+    setTimerOffsetSeconds(rawElapsedSeconds);
+    setTimerPausedSeconds(0);
+  }
+
+  return (
+    <section className={styles.timerStage} aria-labelledby="timer-title">
+      <div className={styles.timerCopy}>
+        <span className={focusing ? styles.liveBadge : styles.readyBadge}>
+          {timerPaused ? "잠시 멈춤" : focusing ? "진행 중" : "준비 완료"}
+        </span>
+        <h2 id="timer-title">
+          {focusing
+            ? activeContinuous
+              ? "계속 Focus가 켜져 있어요"
+              : `${activePreset}분 Focus가 켜져 있어요`
+            : selectedFocusMode === "OPEN"
+              ? "계속 Focus로 시작해요"
+              : `${selectedPreset}분만 작게 시작해요`}
+        </h2>
+        <p>
+          {focusing
+            ? timerPaused
+              ? "타이머를 잠시 세워뒀어요."
+              : activeContinuous
+                ? "멈출 때까지 00초부터 계속 쌓고 있어요."
+                : targetReached
+                  ? "목표 시간은 넘겼고, 더 이어가도 좋아요."
+                  : "00초부터 차근차근 쌓고 있어요."
+            : selectedFocusMode === "OPEN"
+              ? "목표 시간 없이 00:00부터 계속 흘러가요."
+              : "프리셋을 고르고 00:00부터 시작해요."}
+        </p>
+      </div>
+
+      <div className={styles.timerFace} aria-live="polite">
+        <span>{timerLabel}</span>
+        <strong>{formatClock(timerSeconds)}</strong>
+      </div>
+
+      <div
+        className={`${styles.progressTrack} ${
+          activeContinuous ? styles.continuousTrack : ""
+        }`}
+        role="progressbar"
+        aria-label={activeContinuous ? "계속 타이머" : "프리셋 진행률"}
+        aria-valuemax={activeContinuous ? undefined : 100}
+        aria-valuemin={activeContinuous ? undefined : 0}
+        aria-valuenow={activeContinuous ? undefined : progressValue}
+      >
+        <span style={{ width: `${progressBarWidth}%` }} />
+      </div>
+
+      <div
+        className={styles.presetGroup}
+        role="group"
+        aria-label="프리셋 선택"
+      >
+        {focusModeOptions.map((focusMode) => {
+          const selected = focusing
+            ? activeContinuous
+              ? focusMode === "OPEN"
+              : focusMode !== "OPEN" && activePreset === focusMode
+            : selectedFocusMode === focusMode;
+
+          return (
+            <button
+              aria-pressed={selected}
+              className={selected ? styles.selectedPreset : styles.presetButton}
+              disabled={focusing}
+              key={focusMode}
+              onClick={() => onFocusModeChange(focusMode)}
+              type="button"
+            >
+              {focusMode === "OPEN" ? "계속" : `${focusMode}분`}
+            </button>
+          );
+        })}
+      </div>
+
+      {focusing ? (
+        <button
+          className={styles.primaryAction}
+          disabled={!localFocusing && stopFocusPending}
+          onClick={onStopFocus}
+          type="button"
+        >
+          Focus 멈추기
+        </button>
+      ) : (
+        <button
+          className={styles.primaryAction}
+          disabled={selectedFocusMode !== "OPEN" && startFocusPending}
+          onClick={onStartFocus}
+          type="button"
+        >
+          Focus 시작하기
+        </button>
+      )}
+      {activeContinuous ? (
+        <div
+          className={styles.secondaryTimerActions}
+          role="group"
+          aria-label="타이머 조정"
+        >
+          <button
+            onClick={timerPaused ? handleResumeTimer : handlePauseTimer}
+            type="button"
+          >
+            {timerPaused ? "다시 흐르게" : "잠시 멈춤"}
+          </button>
+          <button onClick={handleResetTimer} type="button">
+            시간 초기화
+          </button>
+        </div>
+      ) : null}
+    </section>
+  );
+});
+
+export function FocusPage() {
+  const { accessToken, logout } = useAuth();
+  const token = accessToken ?? "";
+  const queryClient = useQueryClient();
+  const [selectedFocusMode, setSelectedFocusMode] = useState<FocusMode>(5);
+  const [localFocusStartedAt, setLocalFocusStartedAt] = useState<number | null>(
+    null,
+  );
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [actionNotice, setActionNotice] = useState<string | null>(null);
+  const [recoveryModalOpen, setRecoveryModalOpen] = useState(false);
+  const [recoveryFormOpen, setRecoveryFormOpen] = useState(false);
+  const [dismissedRecoveryDate, setDismissedRecoveryDate] = useState<string | null>(
+    () => readRecoveryDismissedDate(),
+  );
+  const [showTinyWinPrompt, setShowTinyWinPrompt] = useState(false);
+  const [recoveryForm, setRecoveryForm] = useState<RecoveryReflectionForm>({
+    ifCondition: "",
+    thenAction: "",
+    whatBrokeDown: "",
+    whatWentWell: "다시 돌아오려고 앱을 열었습니다.",
+  });
+  const recoveryCardViewedRef = useRef(false);
+
+  const homeQuery = useQuery({
+    enabled: Boolean(token),
+    queryFn: ({ signal }) => getHomeToday({ signal, token }),
+    queryKey: homeTodayKey,
+  });
+  const focusSessionsQuery = useQuery({
+    enabled: Boolean(token),
+    queryFn: ({ signal }) => getTodayFocusSessions({ signal, token }),
+    queryKey: focusSessionsTodayKey,
+  });
+  const recoveryCardQuery = useQuery({
+    enabled: Boolean(token),
+    queryFn: ({ signal }) => getRecoveryCard({ signal, token }),
+    queryKey: recoveryCardKey,
+  });
+  const targetDate = homeQuery.data?.targetDate ?? "";
+  const dailyReflectionKey = queryKeys.dailyReflection(targetDate);
+  const dailyReflectionQuery = useQuery({
+    enabled: Boolean(token && targetDate),
+    queryFn: ({ signal }) => getDailyReflection({ signal, targetDate, token }),
+    queryKey: dailyReflectionKey,
+  });
+
+  const focusSessions = focusSessionsQuery.data;
+  const recoveryCard = recoveryCardQuery.data;
+  const savedRecoveryReflection = dailyReflectionQuery.data ?? null;
+  const activeFocusSession = focusSessions
+    ? getActiveFocusSession(focusSessions)
+    : null;
+  const localFocusing = localFocusStartedAt !== null;
+  const serverFocusing = Boolean(activeFocusSession ?? focusSessions?.focusing);
+  const focusing = serverFocusing || localFocusing;
+  const recentSessions = useMemo(
+    () => getSortedSessions(focusSessions?.sessions ?? []).slice(0, 5),
+    [focusSessions?.sessions],
+  );
+  const recoveryDismissedForDate = Boolean(
+    targetDate && dismissedRecoveryDate === targetDate,
+  );
 
   useEffect(() => {
     setDismissedRecoveryDate(readRecoveryDismissedDate());
@@ -407,9 +567,6 @@ export function FocusPage() {
       });
       setActionError(null);
       setActionNotice("집중 세션을 멈췄습니다.");
-      setTimerOffsetSeconds(0);
-      setTimerPaused(false);
-      setTimerPausedSeconds(null);
       setShowTinyWinPrompt(true);
       await refreshFocusData();
     },
@@ -632,9 +789,6 @@ export function FocusPage() {
   function handleStartFocus() {
     if (selectedFocusMode === "OPEN") {
       setLocalFocusStartedAt(Date.now());
-      setTimerOffsetSeconds(0);
-      setTimerPaused(false);
-      setTimerPausedSeconds(null);
       setActionError(null);
       setActionNotice("계속 Focus를 시작했습니다. 이 타이머는 아직 서버에 기록되지 않습니다.");
       return;
@@ -646,33 +800,12 @@ export function FocusPage() {
   function handleStopFocus() {
     if (localFocusing) {
       setLocalFocusStartedAt(null);
-      setTimerOffsetSeconds(0);
-      setTimerPaused(false);
-      setTimerPausedSeconds(null);
       setActionError(null);
       setActionNotice("계속 Focus를 멈췄습니다.");
       return;
     }
 
     stopFocusMutation.mutate();
-  }
-
-  function handlePauseTimer() {
-    setTimerPaused(true);
-    setTimerPausedSeconds(elapsedSeconds);
-  }
-
-  function handleResumeTimer() {
-    setTimerOffsetSeconds(
-      Math.max(0, rawElapsedSeconds - (timerPausedSeconds ?? elapsedSeconds)),
-    );
-    setTimerPaused(false);
-    setTimerPausedSeconds(null);
-  }
-
-  function handleResetTimer() {
-    setTimerOffsetSeconds(rawElapsedSeconds);
-    setTimerPausedSeconds(0);
   }
 
   function openRecoveryEditForm() {
@@ -743,122 +876,18 @@ export function FocusPage() {
         ) : null}
 
         <main className={styles.focusGrid}>
-          <section className={styles.timerStage} aria-labelledby="timer-title">
-            <div className={styles.timerCopy}>
-              <span className={focusing ? styles.liveBadge : styles.readyBadge}>
-                {timerPaused ? "잠시 멈춤" : focusing ? "진행 중" : "준비 완료"}
-              </span>
-              <h2 id="timer-title">
-                {focusing
-                  ? activeContinuous
-                    ? "계속 Focus가 켜져 있어요"
-                    : `${activePreset}분 Focus가 켜져 있어요`
-                  : selectedFocusMode === "OPEN"
-                    ? "계속 Focus로 시작해요"
-                    : `${selectedPreset}분만 작게 시작해요`}
-              </h2>
-              <p>
-                {focusing
-                  ? timerPaused
-                    ? "타이머를 잠시 세워뒀어요."
-                    : activeContinuous
-                      ? "멈출 때까지 00초부터 계속 쌓고 있어요."
-                      : targetReached
-                    ? "목표 시간은 넘겼고, 더 이어가도 좋아요."
-                    : "00초부터 차근차근 쌓고 있어요."
-                  : selectedFocusMode === "OPEN"
-                    ? "목표 시간 없이 00:00부터 계속 흘러가요."
-                    : "프리셋을 고르고 00:00부터 시작해요."}
-              </p>
-            </div>
-
-            <div className={styles.timerFace} aria-live="polite">
-              <span>{timerLabel}</span>
-              <strong>{formatClock(timerSeconds)}</strong>
-            </div>
-
-            <div
-              className={`${styles.progressTrack} ${
-                activeContinuous ? styles.continuousTrack : ""
-              }`}
-              role="progressbar"
-              aria-label={activeContinuous ? "계속 타이머" : "프리셋 진행률"}
-              aria-valuemax={activeContinuous ? undefined : 100}
-              aria-valuemin={activeContinuous ? undefined : 0}
-              aria-valuenow={activeContinuous ? undefined : progressValue}
-            >
-              <span style={{ width: `${progressBarWidth}%` }} />
-            </div>
-
-            <div
-              className={styles.presetGroup}
-              role="group"
-              aria-label="프리셋 선택"
-            >
-              {focusModeOptions.map((focusMode) => {
-                const selected = focusing
-                  ? activeContinuous
-                    ? focusMode === "OPEN"
-                    : focusMode !== "OPEN" && activePreset === focusMode
-                  : selectedFocusMode === focusMode;
-
-                return (
-                  <button
-                    aria-pressed={selected}
-                    className={selected ? styles.selectedPreset : styles.presetButton}
-                    disabled={focusing}
-                    key={focusMode}
-                    onClick={() => setSelectedFocusMode(focusMode)}
-                    type="button"
-                  >
-                    {focusMode === "OPEN" ? "계속" : `${focusMode}분`}
-                  </button>
-                );
-              })}
-            </div>
-
-            {focusing ? (
-              <button
-                className={styles.primaryAction}
-                disabled={!localFocusing && stopFocusMutation.isPending}
-                onClick={handleStopFocus}
-                type="button"
-              >
-                Focus 멈추기
-              </button>
-            ) : (
-              <button
-                className={styles.primaryAction}
-                disabled={
-                  selectedFocusMode !== "OPEN" && startFocusMutation.isPending
-                }
-                onClick={handleStartFocus}
-                type="button"
-              >
-                Focus 시작하기
-              </button>
-            )}
-            {activeContinuous ? (
-              <div
-                className={styles.secondaryTimerActions}
-                role="group"
-                aria-label="타이머 조정"
-              >
-                <button
-                  onClick={timerPaused ? handleResumeTimer : handlePauseTimer}
-                  type="button"
-                >
-                  {timerPaused ? "다시 흐르게" : "잠시 멈춤"}
-                </button>
-                <button
-                  onClick={handleResetTimer}
-                  type="button"
-                >
-                  시간 초기화
-                </button>
-              </div>
-            ) : null}
-          </section>
+          <FocusTimerStage
+            activeFocusSession={activeFocusSession}
+            focusSessionsQueriedAt={focusSessions.queriedAt}
+            focusing={focusing}
+            localFocusStartedAt={localFocusStartedAt}
+            onFocusModeChange={setSelectedFocusMode}
+            onStartFocus={handleStartFocus}
+            onStopFocus={handleStopFocus}
+            selectedFocusMode={selectedFocusMode}
+            startFocusPending={startFocusMutation.isPending}
+            stopFocusPending={stopFocusMutation.isPending}
+          />
 
           <aside className={styles.sidePanels}>
             <section className={styles.recordPanel} aria-labelledby="record-title">
