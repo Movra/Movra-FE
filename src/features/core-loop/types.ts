@@ -157,14 +157,14 @@ export type FriendAccountability = {
 export type HomeToday = {
   targetDate: string;
   futureVision: FutureVision | null;
-  behaviorProfile: BehaviorProfile | null;
-  todayDailyPlan: DailyPlan | null;
-  morningTasks: DailyPlanTask[];
+  behaviorProfile?: BehaviorProfile | null;
+  todayDailyPlan?: DailyPlan | null;
+  morningTasks?: DailyPlanTask[];
   topPicks: TopPick[];
   timetable: Timetable | null;
-  focusSessions: TodayFocusSessions;
-  activeFocusSession: FocusSession | null;
-  recoveryCard: RecoveryCard;
+  focusSessions?: TodayFocusSessions;
+  activeFocusSession?: FocusSession | null;
+  recoveryCard?: RecoveryCard;
   seasonMode: string;
   nextExamSchedule: ExamSchedule | null;
   notificationPreference: NotificationPreference | null;

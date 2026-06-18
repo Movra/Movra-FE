@@ -1,7 +1,7 @@
 import { NavLink } from "react-router-dom";
 
-import characterDefault from "../../assets/auth/character-default.png";
-import movraLogo from "../../assets/auth/movra-logo-cropped.png";
+import characterDefault from "../../assets/auth/character-default.webp";
+import movraLogo from "../../assets/auth/movra-logo-cropped.webp";
 import styles from "./AppSidebar.module.css";
 
 type SidebarItem = {
@@ -44,7 +44,7 @@ const sidebarItems: SidebarItem[] = [
   { icon: "reflection", label: "회고", path: "/reflection" },
   { icon: "statistics", label: "통계", path: "/statistics" },
   { icon: "studyRoom", label: "스터디룸", path: "/study-room" },
-  { icon: "accountability", label: "친구 감시", path: "/accountability" },
+  { icon: "accountability", label: "친구 동행", path: "/accountability" },
   { icon: "settings", label: "설정", path: "/settings" },
 ];
 
@@ -207,12 +207,12 @@ export function AppSidebar({
             <span>{profileSubtitle}</span>
           </div>
         </div>
-        <div className={styles.friendCard} aria-label="친구 Accountability">
+        <div className={styles.friendCard} aria-label="친구 동행">
           <span className={styles.friendCardIcon} aria-hidden="true">
             <FriendsIcon />
           </span>
           <div>
-            <strong>친구 Accountability</strong>
+            <strong>친구 동행</strong>
             <span>{friendText}</span>
           </div>
         </div>

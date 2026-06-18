@@ -5,7 +5,6 @@ import userEvent from "@testing-library/user-event";
 import { App } from "../../app/App";
 import { createHomeTodayFixture } from "../../test/fixtures";
 import { server } from "../../test/server";
-import type { HomeToday } from "./types";
 
 function authenticate(path = "/") {
   window.localStorage.setItem("movra.accessToken", "access-token");
@@ -13,11 +12,17 @@ function authenticate(path = "/") {
   window.history.pushState({}, "", path);
 }
 
-function setupHomeHandler(initialHome: HomeToday) {
+function setupHomeHandler(initialHome: ReturnType<typeof createHomeTodayFixture>) {
   let home = initialHome;
 
   server.use(
     http.get("http://localhost:8080/home/today", () => HttpResponse.json(home)),
+    http.get("http://localhost:8080/behavior-profiles/me", () =>
+      HttpResponse.json(home.behaviorProfile),
+    ),
+    http.get("http://localhost:8080/focus-sessions/today", () =>
+      HttpResponse.json(home.focusSessions),
+    ),
     http.post("http://localhost:8080/focus-sessions/start", () => {
       const activeFocusSession = {
         elapsedSeconds: 0,
@@ -139,13 +144,14 @@ describe("CoreLoopDashboard", () => {
 
     expect(
       await screen.findByRole("heading", {
-        name: "안녕하세요, 김모브라님!",
+        name: "오늘은 TopPick 하나만 끝내요",
       }),
     ).toBeInTheDocument();
 
     const topPickPanel = screen.getByRole("region", { name: "오늘의 TopPick" });
     expect(within(topPickPanel).getByText("수학 개념 정리")).toBeInTheDocument();
-    expect(within(topPickPanel).getByText("오늘의 TopPick")).toBeInTheDocument();
+    expect(within(topPickPanel).getByText("오늘의 핵심 행동")).toBeInTheDocument();
+    expect(within(topPickPanel).getByText("5분 집중")).toBeInTheDocument();
     expect(
       within(topPickPanel).getByRole("link", { name: "TopPick 수정" }),
     ).toHaveAttribute("href", "/planning");
@@ -209,14 +215,14 @@ describe("CoreLoopDashboard", () => {
     render(<App />);
 
     await userEvent.click(
-      await screen.findByRole("button", { name: "집중 시작하기" }),
+      await screen.findByRole("button", { name: "5분 집중 시작하기" }),
     );
     expect(await screen.findByRole("status")).toHaveTextContent(
       "집중 세션을 시작했습니다.",
     );
 
     await userEvent.click(
-      await screen.findByRole("button", { name: "멈추기" }),
+      await screen.findByRole("button", { name: "집중 멈추기" }),
     );
     expect(await screen.findByRole("status")).toHaveTextContent(
       "집중 세션을 멈췄습니다.",
@@ -260,7 +266,7 @@ describe("CoreLoopDashboard", () => {
 
     expect(
       await screen.findByRole("heading", {
-        name: "안녕하세요, 김모브라님!",
+        name: "오늘은 TopPick 하나만 끝내요",
       }),
     ).toBeInTheDocument();
     expect(
@@ -276,7 +282,7 @@ describe("CoreLoopDashboard", () => {
 
     expect(
       await screen.findByRole("heading", {
-        name: "안녕하세요, 김모브라님!",
+        name: "오늘은 TopPick 하나만 끝내요",
       }),
     ).toBeInTheDocument();
     expect(

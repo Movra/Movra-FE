@@ -2,18 +2,24 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { Navigate, NavLink } from "react-router-dom";
 
-import characterDefault from "../../assets/auth/character-default.png";
-import characterFocus from "../../assets/auth/character-focus.png";
-import characterRecovery from "../../assets/auth/character-recovery.png";
-import characterSuccess from "../../assets/auth/character-success.png";
-import characterTopPick from "../../assets/auth/character-toppick.png";
+import characterDefault from "../../assets/auth/character-default.webp";
+import characterFocus from "../../assets/auth/character-focus.webp";
+import characterRecovery from "../../assets/auth/character-recovery.webp";
+import characterSuccess from "../../assets/auth/character-success.webp";
+import characterTopPick from "../../assets/auth/character-toppick.webp";
 import { getErrorMessage } from "../../shared/api/errors";
 import { queryKeys } from "../../shared/queryKeys";
 import { PageHeader } from "../../shared/ui/PageHeader";
 import { recordAnalyticsEventSafely } from "../analytics/api";
 import { useAuth } from "../auth/useAuth";
+import { getBehaviorProfile } from "../onboarding/api";
 import { AppSidebar } from "./AppSidebar";
-import { getHomeToday, startFocusSession, stopFocusSession } from "./api";
+import {
+  getHomeToday,
+  getTodayFocusSessions,
+  startFocusSession,
+  stopFocusSession,
+} from "./api";
 import { formatExamDistance, getFriendAccountabilityText } from "./displayUtils";
 import type {
   HomeToday,
@@ -24,7 +30,12 @@ import type {
 import styles from "./CoreLoopDashboard.module.css";
 
 const homeTodayKey = queryKeys.homeToday();
-const defaultFocusPreset = 5;
+const behaviorProfileKey = queryKeys.behaviorProfileMe();
+const focusSessionsTodayKey = queryKeys.focusSessionsToday();
+type FocusPreset = 3 | 5 | 10 | 25;
+
+const defaultFocusPreset: FocusPreset = 5;
+const supportedFocusPresets: FocusPreset[] = [3, 5, 10, 25];
 
 function HeaderIcon({ type }: { type: "bell" | "calendar" }) {
   return (
@@ -299,6 +310,12 @@ function getFocusGoalHours(startHour?: number, endHour?: number) {
   return Math.min(6, Math.max(1, endHour - startHour));
 }
 
+function getSupportedFocusPreset(minutes: number | null | undefined) {
+  return supportedFocusPresets.includes(minutes as FocusPreset)
+    ? (minutes as FocusPreset)
+    : defaultFocusPreset;
+}
+
 export function CoreLoopDashboard() {
   const { accessToken, logout } = useAuth();
   const token = accessToken ?? "";
@@ -310,12 +327,24 @@ export function CoreLoopDashboard() {
 
   const homeQuery = useQuery({
     enabled: Boolean(token),
-    queryFn: () => getHomeToday({ token }),
+    queryFn: ({ signal }) => getHomeToday({ signal, token }),
     queryKey: homeTodayKey,
+  });
+  const behaviorProfileQuery = useQuery({
+    enabled: Boolean(token),
+    queryFn: ({ signal }) => getBehaviorProfile({ signal, token }),
+    queryKey: behaviorProfileKey,
+    retry: false,
+  });
+  const focusSessionsQuery = useQuery({
+    enabled: Boolean(token),
+    queryFn: ({ signal }) => getTodayFocusSessions({ signal, token }),
+    queryKey: focusSessionsTodayKey,
   });
 
   const startFocusMutation = useMutation({
-    mutationFn: () => startFocusSession({ presetMinutes: focusPreset, token }),
+    mutationFn: (presetMinutes: FocusPreset = focusPreset) =>
+      startFocusSession({ presetMinutes, token }),
     onError: (error) => {
       setActionNotice(null);
       setActionError(getErrorMessage(error));
@@ -331,7 +360,10 @@ export function CoreLoopDashboard() {
       });
       setActionError(null);
       setActionNotice("집중 세션을 시작했습니다.");
-      await queryClient.invalidateQueries({ queryKey: homeTodayKey });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: homeTodayKey }),
+        queryClient.invalidateQueries({ queryKey: focusSessionsTodayKey }),
+      ]);
     },
   });
 
@@ -356,11 +388,14 @@ export function CoreLoopDashboard() {
       });
       setActionError(null);
       setActionNotice("집중 세션을 멈췄습니다.");
-      await queryClient.invalidateQueries({ queryKey: homeTodayKey });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: homeTodayKey }),
+        queryClient.invalidateQueries({ queryKey: focusSessionsTodayKey }),
+      ]);
     },
   });
 
-  if (homeQuery.isLoading) {
+  if (homeQuery.isLoading || focusSessionsQuery.isLoading) {
     return (
       <section className={styles.centerState} aria-live="polite">
         <img
@@ -374,7 +409,7 @@ export function CoreLoopDashboard() {
     );
   }
 
-  if (homeQuery.isError) {
+  if (homeQuery.isError || focusSessionsQuery.isError) {
     return (
       <section className={styles.centerState} aria-live="assertive">
         <img
@@ -384,10 +419,13 @@ export function CoreLoopDashboard() {
           aria-hidden="true"
         />
         <h1 className={styles.stateTitle}>오늘 계획을 불러오지 못했습니다.</h1>
-        <p>{getErrorMessage(homeQuery.error)}</p>
+        <p>{getErrorMessage(homeQuery.error ?? focusSessionsQuery.error)}</p>
         <button
           className={styles.primaryButton}
-          onClick={() => homeQuery.refetch()}
+          onClick={() => {
+            homeQuery.refetch();
+            focusSessionsQuery.refetch();
+          }}
           type="button"
         >
           다시 시도
@@ -402,18 +440,27 @@ export function CoreLoopDashboard() {
     return null;
   }
 
-  if (home.behaviorProfile === null) {
+  if (home.behaviorProfile === null || behaviorProfileQuery.isError) {
     return <Navigate to="/onboarding" replace />;
   }
 
+  const behaviorProfile = behaviorProfileQuery.data ?? home.behaviorProfile;
+  const focusSessions = focusSessionsQuery.data;
   const tasks = home.todayDailyPlan?.tasks ?? [];
   const primaryTopPick = home.topPicks[0] ?? null;
+  const hasActionableTopPick = Boolean(primaryTopPick && !primaryTopPick.completed);
   const futureVision = home.futureVision;
   const nextExamSchedule = home.nextExamSchedule;
+  const recoveryCard = home.recoveryCard;
+  const needsRecovery = Boolean(recoveryCard?.needsRecovery);
+  const recoveryPreset = getSupportedFocusPreset(
+    recoveryCard?.suggestedDurationMinutes,
+  );
   const allTimetableSlots = getSortedTimetableSlots(home.timetable?.slots ?? []);
   const timetableSlots = allTimetableSlots.slice(0, 5);
-  const activeFocusSession = home.activeFocusSession ?? null;
-  const focusing = Boolean(activeFocusSession ?? home.focusSessions.focusing);
+  const activeFocusSession =
+    focusSessions?.sessions.find((session) => session.inProgress) ?? null;
+  const focusing = Boolean(activeFocusSession ?? focusSessions?.focusing);
   const completedTaskCount = tasks.filter((task) => task.completed).length;
   const completedTopPicks = home.topPicks.filter(
     (topPick) => topPick.completed,
@@ -423,10 +470,10 @@ export function CoreLoopDashboard() {
       ? 0
       : Math.round((completedTopPicks / home.topPicks.length) * 100);
   const focusGoalHours = getFocusGoalHours(
-    home.behaviorProfile.preferredFocusStartHour,
-    home.behaviorProfile.preferredFocusEndHour,
+    behaviorProfile?.preferredFocusStartHour,
+    behaviorProfile?.preferredFocusEndHour,
   );
-  const focusTotalSeconds = home.focusSessions.totalFocusSeconds;
+  const focusTotalSeconds = focusSessions?.totalFocusSeconds ?? 0;
   const tinyWinCount = completedTaskCount + completedTopPicks;
   const nextExamLabel = nextExamSchedule
     ? `${nextExamSchedule.title} ${formatExamDistance(
@@ -438,6 +485,29 @@ export function CoreLoopDashboard() {
   const friendAccountabilityText = getFriendAccountabilityText(
     home.friendAccountability,
   );
+  const homeGridClassName = [
+    styles.homeGrid,
+    needsRecovery ? styles.homeGridWithRecovery : null,
+  ]
+    .filter(Boolean)
+    .join(" ");
+  const flowSteps = [
+    {
+      detail: tasks.length > 0 ? `${tasks.length}개 정리` : "계획 적기",
+      label: "비우기",
+      state: primaryTopPick || tasks.length > 0 ? "done" : "active",
+    },
+    {
+      detail: primaryTopPick ? "TopPick 확정" : "1개 선택",
+      label: "고르기",
+      state: primaryTopPick ? "done" : tasks.length > 0 ? "active" : "pending",
+    },
+    {
+      detail: focusing ? "진행 중" : `${focusPreset}분 집중`,
+      label: "시작",
+      state: focusing ? "done" : hasActionableTopPick ? "active" : "pending",
+    },
+  ];
 
   return (
     <section className={styles.dashboard} aria-labelledby="home-title">
@@ -450,8 +520,8 @@ export function CoreLoopDashboard() {
       <div className={styles.contentShell}>
         <PageHeader
           className={styles.topHeader}
-          description="오늘은 한 가지를 끝내는 데 집중해볼까요?"
-          title="안녕하세요, 김모브라님!"
+          description="머릿속 계획을 비우고, 하나를 고른 뒤, 짧게 시작하세요."
+          title="오늘은 TopPick 하나만 끝내요"
           titleId="home-title"
           actions={
             <div className={styles.headerMeta} aria-label="오늘 정보">
@@ -504,23 +574,44 @@ export function CoreLoopDashboard() {
           </p>
         ) : null}
 
-        <main className={styles.homeGrid}>
+        <main className={homeGridClassName}>
           <section className={styles.topPickBoard} aria-label="오늘의 TopPick">
             <div className={styles.topPickContent}>
               <span className={styles.eyebrow}>
                 <DashboardIcon type="star" />
-                오늘의 TopPick
+                오늘의 핵심 행동
               </span>
               <h2 id="toppick-title">
                 {primaryTopPick
                   ? primaryTopPick.content
-                  : "오늘, 한 가지를 완성하는 날이에요!"}
+                  : "머릿속 계획을 먼저 비워볼까요?"}
               </h2>
               <p>
                 {primaryTopPick
-                  ? "정해둔 한 가지에 바로 들어갈 수 있게 집중 시간을 준비했어요."
-                  : "하나에 집중하면 성장의 길이 달라져요. 당신의 TopPick이 오늘을 바꿔줄 거예요."}
+                  ? primaryTopPick.completed
+                    ? "이미 한 가지를 끝냈어요. 다음 행동은 새 TopPick을 고르거나 짧게 회고하는 것입니다."
+                    : "지금 해야 할 일은 하나입니다. 준비된 집중 세션으로 바로 이어가요."
+                  : "떠오르는 일을 모두 적고 오늘 반드시 지킬 한 가지를 골라요."}
               </p>
+
+              <ol className={styles.flowRail} aria-label="오늘 행동 흐름">
+                {flowSteps.map((step) => (
+                  <li
+                    aria-current={step.state === "active" ? "step" : undefined}
+                    className={[
+                      styles.flowStep,
+                      step.state === "done" ? styles.flowStepDone : null,
+                      step.state === "active" ? styles.flowStepActive : null,
+                    ]
+                      .filter(Boolean)
+                      .join(" ")}
+                    key={step.label}
+                  >
+                    <span>{step.label}</span>
+                    <strong>{step.detail}</strong>
+                  </li>
+                ))}
+              </ol>
 
               {primaryTopPick ? (
                 <div className={styles.topPickStatusCard}>
@@ -545,10 +636,10 @@ export function CoreLoopDashboard() {
               )}
 
               <div className={styles.actionRow}>
-                {primaryTopPick ? (
+                {hasActionableTopPick ? (
                   focusing ? (
                     <button
-                      aria-label="멈추기"
+                      aria-label="집중 멈추기"
                       className={styles.primaryAction}
                       onClick={() => stopFocusMutation.mutate()}
                       type="button"
@@ -557,12 +648,12 @@ export function CoreLoopDashboard() {
                     </button>
                   ) : (
                     <button
-                      aria-label="집중 시작하기"
+                      aria-label={`${focusPreset}분 집중 시작하기`}
                       className={styles.primaryAction}
-                      onClick={() => startFocusMutation.mutate()}
+                      onClick={() => startFocusMutation.mutate(focusPreset)}
                       type="button"
                     >
-                      집중 시작하기
+                      {focusPreset}분 집중 시작
                       <span aria-hidden="true">
                         <DashboardIcon type="chevron" />
                       </span>
@@ -570,15 +661,18 @@ export function CoreLoopDashboard() {
                   )
                 ) : (
                   <NavLink className={styles.primaryAction} to="/planning">
-                    오늘의 TopPick 선택하기
+                    {primaryTopPick ? "다음 TopPick 정하기" : "MindSweep로 TopPick 정하기"}
                     <span aria-hidden="true">
                       <DashboardIcon type="chevron" />
                     </span>
                   </NavLink>
                 )}
                 {primaryTopPick ? (
-                  <NavLink className={styles.secondaryAction} to="/planning">
-                    TopPick 수정
+                  <NavLink
+                    className={styles.secondaryAction}
+                    to={primaryTopPick.completed ? "/reflection" : "/planning"}
+                  >
+                    {primaryTopPick.completed ? "오늘 회고" : "TopPick 수정"}
                   </NavLink>
                 ) : null}
               </div>
@@ -588,6 +682,37 @@ export function CoreLoopDashboard() {
               <img src={characterTopPick} alt="" />
             </div>
           </section>
+
+          {needsRecovery ? (
+            <section
+              className={styles.recoveryPanel}
+              aria-labelledby="recovery-title"
+            >
+              <img src={characterRecovery} alt="" aria-hidden="true" />
+              <div>
+                <span>회복 제안</span>
+                <h2 id="recovery-title">
+                  어제는 어제고, 오늘 다시 시작하면 돼요.
+                </h2>
+                <p>
+                  {recoveryCard?.suggestedAction ||
+                    `${recoveryPreset}분만 집중하고 감각을 되찾아보세요.`}
+                </p>
+              </div>
+              <div className={styles.recoveryActions}>
+                <button
+                  className={styles.recoveryPrimary}
+                  onClick={() => startFocusMutation.mutate(recoveryPreset)}
+                  type="button"
+                >
+                  {recoveryPreset}분 회복 집중
+                </button>
+                <NavLink className={styles.recoverySecondary} to="/reflection">
+                  짧게 회고
+                </NavLink>
+              </div>
+            </section>
+          ) : null}
 
           <section className={styles.timetablePanel} aria-labelledby="timetable-title">
             <div className={styles.panelTitleRow}>
@@ -732,7 +857,7 @@ export function CoreLoopDashboard() {
               </div>
             </div>
             <NavLink className={styles.focusPageLink} to="/focus">
-              Focus 페이지로 이동
+              자세히 보기
               <span aria-hidden="true">
                 <DashboardIcon type="chevron" />
               </span>
@@ -773,14 +898,14 @@ export function CoreLoopDashboard() {
                   <DashboardIcon type="target" />
                 </span>
                 <span>집중 세션</span>
-                <strong>{home.focusSessions.sessions.length}회</strong>
+                <strong>{focusSessions?.sessions.length ?? 0}회</strong>
                 <small>목표 5회</small>
                 <div className={styles.progressLine} aria-hidden="true">
                   <span
                     style={{
                       width: `${Math.min(
                         100,
-                        home.focusSessions.sessions.length * 20,
+                        (focusSessions?.sessions.length ?? 0) * 20,
                       )}%`,
                     }}
                   />
@@ -813,7 +938,7 @@ export function CoreLoopDashboard() {
         </main>
 
         <div className={styles.mobileStickyAction}>
-          {primaryTopPick ? (
+          {hasActionableTopPick ? (
             focusing ? (
               <button
                 aria-label="모바일 하단 집중 멈추기"
@@ -825,21 +950,21 @@ export function CoreLoopDashboard() {
               </button>
             ) : (
               <button
-                aria-label="모바일 하단 집중 시작하기"
+                aria-label={`모바일 하단 ${focusPreset}분 집중 시작하기`}
                 className={styles.primaryAction}
-                onClick={() => startFocusMutation.mutate()}
+                onClick={() => startFocusMutation.mutate(focusPreset)}
                 type="button"
               >
-                집중 시작하기
+                {focusPreset}분 집중 시작
               </button>
             )
           ) : (
             <NavLink
-              aria-label="모바일 하단 오늘의 TopPick 선택하기"
+              aria-label="모바일 하단 MindSweep로 TopPick 정하기"
               className={styles.primaryAction}
               to="/planning"
             >
-              오늘의 TopPick 선택하기
+              {primaryTopPick ? "다음 TopPick 정하기" : "MindSweep로 TopPick 정하기"}
             </NavLink>
           )}
         </div>

@@ -1,5 +1,6 @@
 import { apiRequest } from "../../shared/api/client";
 import type {
+  DailyPlan,
   DailyPlanTask,
   FocusSession,
   HomeToday,
@@ -10,6 +11,7 @@ import type {
 } from "./types";
 
 type AuthenticatedRequest = {
+  signal?: AbortSignal;
   token: string;
 };
 
@@ -21,14 +23,18 @@ type TaskRequest = DailyPlanRequest & {
   taskId: string;
 };
 
-export function getHomeToday({ token }: AuthenticatedRequest) {
-  return apiRequest<HomeToday>("/home/today", { token });
+export function getHomeToday({ signal, token }: AuthenticatedRequest) {
+  return apiRequest<HomeToday>("/home/today", { signal, token });
 }
 
-export function getMindSweeps({ dailyPlanId, token }: DailyPlanRequest) {
+export function getTodayDailyPlan({ signal, token }: AuthenticatedRequest) {
+  return apiRequest<DailyPlan>("/daily-plans/today", { signal, token });
+}
+
+export function getMindSweeps({ dailyPlanId, signal, token }: DailyPlanRequest) {
   return apiRequest<DailyPlanTask[]>(
     `/daily-plans/${dailyPlanId}/mind-sweeps`,
-    { token },
+    { signal, token },
   );
 }
 
@@ -88,8 +94,9 @@ export function uncompleteMindSweep({
   );
 }
 
-export function getTopPicks({ dailyPlanId, token }: DailyPlanRequest) {
+export function getTopPicks({ dailyPlanId, signal, token }: DailyPlanRequest) {
   return apiRequest<TopPick[]>(`/daily-plans/${dailyPlanId}/top-picks`, {
+    signal,
     token,
   });
 }
@@ -168,12 +175,18 @@ export function uncompleteMorningTask({
   );
 }
 
-export function getTodayFocusSessions({ token }: AuthenticatedRequest) {
-  return apiRequest<TodayFocusSessions>("/focus-sessions/today", { token });
+export function getTodayFocusSessions({ signal, token }: AuthenticatedRequest) {
+  return apiRequest<TodayFocusSessions>("/focus-sessions/today", {
+    signal,
+    token,
+  });
 }
 
-export function getRecoveryCard({ token }: AuthenticatedRequest) {
-  return apiRequest<RecoveryCard>("/focus-sessions/recovery-card", { token });
+export function getRecoveryCard({ signal, token }: AuthenticatedRequest) {
+  return apiRequest<RecoveryCard>("/focus-sessions/recovery-card", {
+    signal,
+    token,
+  });
 }
 
 export function startFocusSession({
