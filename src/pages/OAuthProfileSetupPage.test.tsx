@@ -6,13 +6,25 @@ import { App } from "../app/App";
 import { createHomeTodayFixture } from "../test/fixtures";
 import { server } from "../test/server";
 
+function setupHomeDataHandlers() {
+  const home = createHomeTodayFixture();
+
+  server.use(
+    http.get("http://localhost:8080/home/today", () => HttpResponse.json(home)),
+    http.get("http://localhost:8080/behavior-profiles/me", () =>
+      HttpResponse.json(home.behaviorProfile),
+    ),
+    http.get("http://localhost:8080/focus-sessions/today", () =>
+      HttpResponse.json(home.focusSessions),
+    ),
+  );
+}
+
 describe("OAuthProfileSetupPage", () => {
   it("stores issued tokens after OAuth profile setup and enters home", async () => {
     const requests: Array<Record<string, FormDataEntryValue | null>> = [];
+    setupHomeDataHandlers();
     server.use(
-      http.get("http://localhost:8080/home/today", () =>
-        HttpResponse.json(createHomeTodayFixture()),
-      ),
       http.post(
         "http://localhost:8080/auth/oauth/profile-setup",
         async ({ request }) => {
@@ -42,7 +54,7 @@ describe("OAuthProfileSetupPage", () => {
 
     render(<App />);
 
-    await userEvent.type(screen.getByLabelText("계정 ID"), "oauthstudent");
+    await userEvent.type(await screen.findByLabelText("계정 ID"), "oauthstudent");
     await userEvent.type(screen.getByLabelText("프로필 이름"), "오스");
     await userEvent.upload(
       screen.getByLabelText("이미지 선택"),
@@ -53,7 +65,7 @@ describe("OAuthProfileSetupPage", () => {
 
     expect(
       await screen.findByRole("heading", {
-        name: "안녕하세요, 김모브라님!",
+        name: "오늘은 TopPick 하나만 끝내요",
       }),
     ).toBeInTheDocument();
     expect(window.sessionStorage.getItem("movra.accessToken")).toBe(

@@ -1,7 +1,7 @@
 import { type FormEvent, useEffect, useState } from "react";
 import { Link, Navigate, useNavigate } from "react-router-dom";
 
-import characterDefault from "../assets/auth/character-default.png";
+import characterDefault from "../assets/auth/character-default.webp";
 import { signup } from "../features/auth/api";
 import { useAuth } from "../features/auth/useAuth";
 import { ApiClientError } from "../shared/api/client";

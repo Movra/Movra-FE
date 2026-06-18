@@ -1,7 +1,7 @@
 import { type FormEvent, useEffect, useState } from "react";
 import { Link, Navigate, useNavigate, useSearchParams } from "react-router-dom";
 
-import characterMindSweep from "../assets/auth/character-mindsweep.png";
+import characterMindSweep from "../assets/auth/character-mindsweep.webp";
 import { useAuth } from "../features/auth/useAuth";
 import { ApiClientError } from "../shared/api/client";
 import { AuthLayout } from "./AuthLayout";

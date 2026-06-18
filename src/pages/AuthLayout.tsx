@@ -1,10 +1,10 @@
 import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
 
-import characterDefault from "../assets/auth/character-default.png";
-import characterFocus from "../assets/auth/character-focus.png";
-import characterMindSweep from "../assets/auth/character-mindsweep.png";
-import movraLogo from "../assets/auth/movra-logo-cropped.png";
+import characterDefault from "../assets/auth/character-default.webp";
+import characterFocus from "../assets/auth/character-focus.webp";
+import characterMindSweep from "../assets/auth/character-mindsweep.webp";
+import movraLogo from "../assets/auth/movra-logo-cropped.webp";
 import styles from "./LoginPage.module.css";
 
 type AuthLayoutVariant = "login" | "oauth" | "signup";

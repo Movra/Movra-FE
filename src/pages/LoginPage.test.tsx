@@ -9,12 +9,28 @@ import {
 } from "../test/fixtures";
 import { server } from "../test/server";
 
+function setupHomeDataHandlers(getHome = () => createHomeTodayFixture()) {
+  server.use(
+    http.get("http://localhost:8080/home/today", () =>
+      HttpResponse.json(getHome()),
+    ),
+    http.get("http://localhost:8080/behavior-profiles/me", () => {
+      const behaviorProfile = getHome().behaviorProfile;
+
+      return behaviorProfile
+        ? HttpResponse.json(behaviorProfile)
+        : HttpResponse.json({ message: "Behavior profile not found" }, { status: 404 });
+    }),
+    http.get("http://localhost:8080/focus-sessions/today", () =>
+      HttpResponse.json(getHome().focusSessions),
+    ),
+  );
+}
+
 describe("LoginPage", () => {
   it("stores tokens and navigates to the protected home after login", async () => {
+    setupHomeDataHandlers();
     server.use(
-      http.get("http://localhost:8080/home/today", () =>
-        HttpResponse.json(createHomeTodayFixture()),
-      ),
       http.post("http://localhost:8080/auth/login", async ({ request }) => {
         expect(await request.json()).toEqual({
           accountId: "student",
@@ -31,7 +47,7 @@ describe("LoginPage", () => {
 
     render(<App />);
 
-    expect(screen.getByRole("link", { name: "Google로 로그인" })).toHaveAttribute(
+    expect(await screen.findByRole("link", { name: "Google로 로그인" })).toHaveAttribute(
       "href",
       "http://localhost:8080/oauth2/authorization/google",
     );
@@ -40,13 +56,13 @@ describe("LoginPage", () => {
       "http://localhost:8080/oauth2/authorization/naver",
     );
 
-    await userEvent.type(screen.getByLabelText("계정 ID"), "student");
+    await userEvent.type(await screen.findByLabelText("계정 ID"), "student");
     await userEvent.type(screen.getByLabelText("비밀번호"), "password");
     await userEvent.click(screen.getByRole("button", { name: "로그인" }));
 
     expect(
       await screen.findByRole("heading", {
-        name: "안녕하세요, 김모브라님!",
+        name: "오늘은 TopPick 하나만 끝내요",
       }),
     ).toBeInTheDocument();
     expect(window.sessionStorage.getItem("movra.accessToken")).toBe(
@@ -61,18 +77,14 @@ describe("LoginPage", () => {
   it("redirects to onboarding after login when behavior profile is missing", async () => {
     let profileCreated = false;
 
+    setupHomeDataHandlers(() =>
+      createHomeTodayFixture({
+        behaviorProfile: profileCreated ? createBehaviorProfileFixture() : null,
+      }),
+    );
     server.use(
       http.get("http://localhost:8080/auth/onboarding-context", () =>
         HttpResponse.json({ pendingSchoolHours: false }),
-      ),
-      http.get("http://localhost:8080/home/today", () =>
-        HttpResponse.json(
-          createHomeTodayFixture({
-            behaviorProfile: profileCreated
-              ? createBehaviorProfileFixture()
-              : null,
-          }),
-        ),
       ),
       http.post("http://localhost:8080/auth/login", () =>
         HttpResponse.json({
@@ -90,7 +102,7 @@ describe("LoginPage", () => {
 
     render(<App />);
 
-    await userEvent.type(screen.getByLabelText("계정 ID"), "student");
+    await userEvent.type(await screen.findByLabelText("계정 ID"), "student");
     await userEvent.type(screen.getByLabelText("비밀번호"), "password");
     await userEvent.click(screen.getByRole("button", { name: "로그인" }));
 
@@ -104,7 +116,7 @@ describe("LoginPage", () => {
 
     expect(
       await screen.findByRole("heading", {
-        name: "안녕하세요, 김모브라님!",
+        name: "오늘은 TopPick 하나만 끝내요",
       }),
     ).toBeInTheDocument();
   });
@@ -127,7 +139,7 @@ describe("LoginPage", () => {
 
     render(<App />);
 
-    await userEvent.type(screen.getByLabelText("계정 ID"), "student");
+    await userEvent.type(await screen.findByLabelText("계정 ID"), "student");
     await userEvent.type(screen.getByLabelText("비밀번호"), "wrongpass");
     await userEvent.click(screen.getByRole("button", { name: "로그인" }));
 

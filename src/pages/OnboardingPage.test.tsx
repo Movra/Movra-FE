@@ -19,23 +19,37 @@ function authenticate(path = "/onboarding") {
   window.history.pushState({}, "", path);
 }
 
+function setupHomeDataHandlers(getHome = () => createHomeTodayFixture()) {
+  server.use(
+    http.get("http://localhost:8080/home/today", () =>
+      HttpResponse.json(getHome()),
+    ),
+    http.get("http://localhost:8080/behavior-profiles/me", () => {
+      const behaviorProfile = getHome().behaviorProfile;
+
+      return behaviorProfile
+        ? HttpResponse.json(behaviorProfile)
+        : HttpResponse.json({ message: "Behavior profile not found" }, { status: 404 });
+    }),
+    http.get("http://localhost:8080/focus-sessions/today", () =>
+      HttpResponse.json(getHome().focusSessions),
+    ),
+  );
+}
+
 describe("OnboardingPage", () => {
   it("creates the default behavior profile when skipped and enters home", async () => {
     let profileCreated = false;
     const requests: BehaviorProfileRequest[] = [];
 
+    setupHomeDataHandlers(() =>
+      createHomeTodayFixture({
+        behaviorProfile: profileCreated ? createBehaviorProfileFixture() : null,
+      }),
+    );
     server.use(
       http.get("http://localhost:8080/auth/onboarding-context", () =>
         HttpResponse.json({ pendingSchoolHours: false }),
-      ),
-      http.get("http://localhost:8080/home/today", () =>
-        HttpResponse.json(
-          createHomeTodayFixture({
-            behaviorProfile: profileCreated
-              ? createBehaviorProfileFixture()
-              : null,
-          }),
-        ),
       ),
       http.post("http://localhost:8080/behavior-profiles", async ({ request }) => {
         requests.push((await request.json()) as BehaviorProfileRequest);
@@ -69,7 +83,7 @@ describe("OnboardingPage", () => {
     ]);
     expect(
       await screen.findByRole("heading", {
-        name: "안녕하세요, 김모브라님!",
+        name: "오늘은 TopPick 하나만 끝내요",
       }),
     ).toBeInTheDocument();
   });
@@ -77,12 +91,10 @@ describe("OnboardingPage", () => {
   it("stores selected answers as the documented behavior profile", async () => {
     const requests: BehaviorProfileRequest[] = [];
 
+    setupHomeDataHandlers();
     server.use(
       http.get("http://localhost:8080/auth/onboarding-context", () =>
         HttpResponse.json({ pendingSchoolHours: true }),
-      ),
-      http.get("http://localhost:8080/home/today", () =>
-        HttpResponse.json(createHomeTodayFixture()),
       ),
       http.post("http://localhost:8080/behavior-profiles", async ({ request }) => {
         requests.push((await request.json()) as BehaviorProfileRequest);
@@ -125,7 +137,7 @@ describe("OnboardingPage", () => {
     ]);
     expect(
       await screen.findByRole("heading", {
-        name: "안녕하세요, 김모브라님!",
+        name: "오늘은 TopPick 하나만 끝내요",
       }),
     ).toBeInTheDocument();
   });

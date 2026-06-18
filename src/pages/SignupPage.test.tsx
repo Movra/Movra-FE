@@ -26,7 +26,7 @@ describe("SignupPage", () => {
 
     render(<App />);
 
-    await userEvent.type(screen.getByLabelText("이메일"), "student@example.com");
+    await userEvent.type(await screen.findByLabelText("이메일"), "student@example.com");
     await userEvent.type(screen.getByLabelText("계정 ID"), "student");
     await userEvent.type(screen.getByLabelText("프로필 이름"), "학생");
     await userEvent.upload(
@@ -59,7 +59,7 @@ describe("SignupPage", () => {
 
     render(<App />);
 
-    await userEvent.type(screen.getByLabelText("이메일"), "student@example.com");
+    await userEvent.type(await screen.findByLabelText("이메일"), "student@example.com");
     await userEvent.type(screen.getByLabelText("계정 ID"), "student");
     await userEvent.type(screen.getByLabelText("프로필 이름"), "학생");
     await userEvent.upload(

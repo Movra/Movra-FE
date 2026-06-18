@@ -2,12 +2,12 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { Navigate, useNavigate, useSearchParams } from "react-router-dom";
 
-import characterDefault from "../assets/auth/character-default.png";
-import characterMindSweep from "../assets/auth/character-mindsweep.png";
-import characterRecovery from "../assets/auth/character-recovery.png";
-import characterSuccess from "../assets/auth/character-success.png";
-import characterTopPick from "../assets/auth/character-toppick.png";
-import movraLogo from "../assets/auth/movra-logo-cropped.png";
+import characterDefault from "../assets/auth/character-default.webp";
+import characterMindSweep from "../assets/auth/character-mindsweep.webp";
+import characterRecovery from "../assets/auth/character-recovery.webp";
+import characterSuccess from "../assets/auth/character-success.webp";
+import characterTopPick from "../assets/auth/character-toppick.webp";
+import movraLogo from "../assets/auth/movra-logo-cropped.webp";
 import { ApiClientError } from "../shared/api/client";
 import { recordAnalyticsEventSafely } from "../features/analytics/api";
 import { useAuth } from "../features/auth/useAuth";
@@ -265,13 +265,13 @@ export function OnboardingPage() {
   const onboardingStartedRecordedRef = useRef(false);
 
   const onboardingContextQuery = useQuery({
-    queryFn: getOnboardingContext,
+    queryFn: ({ signal }) => getOnboardingContext(signal),
     queryKey: ["onboarding-context"],
   });
 
   const behaviorProfileQuery = useQuery({
     enabled: isEditMode && Boolean(token),
-    queryFn: () => getBehaviorProfile({ token }),
+    queryFn: ({ signal }) => getBehaviorProfile({ signal, token }),
     queryKey: queryKeys.behaviorProfileMe(),
   });
 
