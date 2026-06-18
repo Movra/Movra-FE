@@ -11,7 +11,7 @@ import type {
   SocialPreference,
 } from "../features/onboarding/types";
 
-import characterDefault from "../assets/auth/character-default.png";
+import characterDefault from "../assets/auth/character-default.webp";
 import { recordAnalyticsEventSafely } from "../features/analytics/api";
 import { useAuth } from "../features/auth/useAuth";
 import { AppSidebar } from "../features/core-loop/AppSidebar";
@@ -126,13 +126,13 @@ export function SettingsPage() {
 
   const homeQuery = useQuery({
     enabled: Boolean(token),
-    queryFn: () => getHomeToday({ token }),
+    queryFn: ({ signal }) => getHomeToday({ signal, token }),
     queryKey: homeTodayKey,
   });
 
   const preferenceQuery = useQuery({
     enabled: Boolean(token),
-    queryFn: () => getNotificationPreference({ token }),
+    queryFn: ({ signal }) => getNotificationPreference({ signal, token }),
     queryKey: notificationPreferenceKey,
   });
 
@@ -243,6 +243,8 @@ export function SettingsPage() {
   if (home.behaviorProfile === null) {
     return <Navigate to="/onboarding" replace />;
   }
+
+  const behaviorProfile = home.behaviorProfile;
 
   function updateNotificationField<K extends keyof NotificationFormState>(
     field: K,
@@ -536,32 +538,40 @@ export function SettingsPage() {
               <div>
                 <dt>실행 난이도</dt>
                 <dd>
-                  {executionDifficultyLabels[home.behaviorProfile.executionDifficulty]}
+                  {behaviorProfile
+                    ? executionDifficultyLabels[behaviorProfile.executionDifficulty]
+                    : "-"}
                 </dd>
               </div>
               <div>
                 <dt>사회적 선호</dt>
                 <dd>
-                  {socialPreferenceLabels[home.behaviorProfile.socialPreference]}
+                  {behaviorProfile
+                    ? socialPreferenceLabels[behaviorProfile.socialPreference]
+                    : "-"}
                 </dd>
               </div>
               <div>
                 <dt>회복 스타일</dt>
                 <dd>
-                  {recoveryStyleLabels[home.behaviorProfile.recoveryStyle]}
+                  {behaviorProfile
+                    ? recoveryStyleLabels[behaviorProfile.recoveryStyle]
+                    : "-"}
                 </dd>
               </div>
               <div>
                 <dt>시험 트랙</dt>
-                <dd>{examTrackLabels[home.behaviorProfile.examTrack]}</dd>
+                <dd>{behaviorProfile ? examTrackLabels[behaviorProfile.examTrack] : "-"}</dd>
               </div>
               <div>
                 <dt>선호 집중 시간</dt>
-                <dd>{describeFocusHours(home.behaviorProfile)}</dd>
+                <dd>{behaviorProfile ? describeFocusHours(behaviorProfile) : "-"}</dd>
               </div>
               <div>
                 <dt>코칭 모드</dt>
-                <dd>{coachingModeLabels[home.behaviorProfile.coachingMode]}</dd>
+                <dd>
+                  {behaviorProfile ? coachingModeLabels[behaviorProfile.coachingMode] : "-"}
+                </dd>
               </div>
             </dl>
 
