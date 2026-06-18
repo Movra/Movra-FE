@@ -121,6 +121,12 @@ function setupTimetableHandlers(initialHome: HomeToday) {
 
   server.use(
     http.get("http://localhost:8080/home/today", () => HttpResponse.json(home)),
+    http.get("http://localhost:8080/daily-plans/today", () =>
+      HttpResponse.json(home.todayDailyPlan),
+    ),
+    http.get("http://localhost:8080/behavior-profiles/me", () =>
+      HttpResponse.json(home.behaviorProfile),
+    ),
     http.get("http://localhost:8080/daily-plans/:dailyPlanId/top-picks", () =>
       HttpResponse.json(home.topPicks),
     ),
@@ -634,6 +640,12 @@ describe("TimetablePage", () => {
     server.use(
       http.get("http://localhost:8080/home/today", () =>
         HttpResponse.json({ ...home, timetable: currentTimetable }),
+      ),
+      http.get("http://localhost:8080/daily-plans/today", () =>
+        HttpResponse.json(home.todayDailyPlan),
+      ),
+      http.get("http://localhost:8080/behavior-profiles/me", () =>
+        HttpResponse.json(home.behaviorProfile),
       ),
       http.get("http://localhost:8080/daily-plans/:dailyPlanId/top-picks", () =>
         HttpResponse.json(home.topPicks),
@@ -1375,19 +1387,26 @@ describe("TimetablePage", () => {
   });
 
   it("shows a backend contract message when DailyPlan exists but timetable is missing", async () => {
+    const home = createHomeTodayFixture({
+      timetable: null,
+      todayDailyPlan: {
+        dailyPlanId: "daily-plan-id",
+        morningTasks: [],
+        planDate: "2026-04-24",
+        tasks: [],
+      },
+    });
+
     server.use(
-      http.get("http://localhost:8080/home/today", () =>
-        HttpResponse.json(
-          createHomeTodayFixture({
-            timetable: null,
-            todayDailyPlan: {
-              dailyPlanId: "daily-plan-id",
-              morningTasks: [],
-              planDate: "2026-04-24",
-              tasks: [],
-            },
-          }),
-        ),
+      http.get("http://localhost:8080/home/today", () => HttpResponse.json(home)),
+      http.get("http://localhost:8080/daily-plans/today", () =>
+        HttpResponse.json(home.todayDailyPlan),
+      ),
+      http.get("http://localhost:8080/behavior-profiles/me", () =>
+        HttpResponse.json(home.behaviorProfile),
+      ),
+      http.get("http://localhost:8080/daily-plans/:dailyPlanId/top-picks", () =>
+        HttpResponse.json(home.topPicks),
       ),
       http.get("http://localhost:8080/timetables", () =>
         HttpResponse.json({ message: "Timetable not found" }, { status: 404 }),

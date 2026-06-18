@@ -12,18 +12,20 @@ import {
 } from "react";
 import { Navigate, NavLink } from "react-router-dom";
 
-import characterDefault from "../assets/auth/character-default.png";
+import characterDefault from "../assets/auth/character-default.webp";
 import { recordAnalyticsEventSafely } from "../features/analytics/api";
 import { useAuth } from "../features/auth/useAuth";
 import { AppSidebar } from "../features/core-loop/AppSidebar";
 import {
   completeMindSweep,
   getHomeToday,
+  getTodayDailyPlan,
   getTopPicks,
   updateMindSweep,
   updateMorningTask,
   uncompleteMindSweep,
 } from "../features/core-loop/api";
+import { getBehaviorProfile } from "../features/onboarding/api";
 import {
   getFriendAccountabilityText,
   getNextExamLabel,
@@ -71,6 +73,8 @@ import { PageHeader } from "../shared/ui/PageHeader";
 import styles from "./TimetablePage.module.css";
 
 const homeTodayKey = queryKeys.homeToday();
+const behaviorProfileKey = queryKeys.behaviorProfileMe();
+const dailyPlanTodayKey = ["daily-plans", "today"] as const;
 const unassignedTopPickMessage =
   "시간표에 배정되지 않은 TopPick이 있습니다. TopPick을 모두 배정한 뒤 일반 할 일을 넣어 주세요.";
 
@@ -488,7 +492,7 @@ function getTaskById(home: HomeToday) {
   (home.todayDailyPlan?.morningTasks ?? []).forEach((task) => {
     taskById.set(task.taskId, { ...task, taskType: "MORNING" });
   });
-  home.morningTasks.forEach((task) => {
+  (home.morningTasks ?? []).forEach((task) => {
     taskById.set(task.taskId, { ...task, taskType: "MORNING" });
   });
 
@@ -673,23 +677,35 @@ export function TimetablePage() {
 
   const homeQuery = useQuery({
     enabled: Boolean(token),
-    queryFn: () => getHomeToday({ token }),
+    queryFn: ({ signal }) => getHomeToday({ signal, token }),
     queryKey: homeTodayKey,
+  });
+  const dailyPlanQuery = useQuery({
+    enabled: Boolean(token),
+    queryFn: ({ signal }) => getTodayDailyPlan({ signal, token }),
+    queryKey: dailyPlanTodayKey,
+  });
+  const behaviorProfileQuery = useQuery({
+    enabled: Boolean(token),
+    queryFn: ({ signal }) => getBehaviorProfile({ signal, token }),
+    queryKey: behaviorProfileKey,
+    retry: false,
   });
 
   const home = homeQuery.data;
+  const dailyPlan = dailyPlanQuery.data ?? home?.todayDailyPlan ?? null;
   const dailyPlanId =
-    home?.todayDailyPlan?.dailyPlanId ?? home?.timetable?.dailyPlanId ?? "";
+    dailyPlan?.dailyPlanId ?? home?.timetable?.dailyPlanId ?? "";
   const timetableQueryKey = queryKeys.timetable(dailyPlanId);
   const topPicksQueryKey = queryKeys.topPicks(dailyPlanId);
   const timetableQuery = useQuery({
     enabled: Boolean(token && dailyPlanId),
-    queryFn: () => getTimetable({ dailyPlanId, token }),
+    queryFn: ({ signal }) => getTimetable({ dailyPlanId, signal, token }),
     queryKey: timetableQueryKey,
   });
   const topPicksQuery = useQuery({
     enabled: Boolean(token && dailyPlanId),
-    queryFn: () => getTopPicks({ dailyPlanId, token }),
+    queryFn: ({ signal }) => getTopPicks({ dailyPlanId, signal, token }),
     queryKey: topPicksQueryKey,
   });
   const timetable = timetableQuery.data ?? home?.timetable ?? null;
@@ -816,6 +832,7 @@ export function TimetablePage() {
   async function refreshTimetable() {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: homeTodayKey }),
+      queryClient.invalidateQueries({ queryKey: dailyPlanTodayKey }),
       queryClient.invalidateQueries({ queryKey: timetableQueryKey }),
       queryClient.invalidateQueries({ queryKey: topPicksQueryKey }),
     ]);
@@ -1073,6 +1090,23 @@ export function TimetablePage() {
         ),
       };
     });
+    queryClient.setQueryData(dailyPlanTodayKey, (current: typeof dailyPlan) =>
+      current
+        ? {
+            ...current,
+            morningTasks: current.morningTasks.map((task) =>
+              task.taskId === taskId
+                ? { ...task, completed: nextCompleted }
+                : task,
+            ),
+            tasks: current.tasks.map((task) =>
+              task.taskId === taskId
+                ? { ...task, completed: nextCompleted }
+                : task,
+            ),
+          }
+        : current,
+    );
   }
 
   function optimisticallyUpdateTaskContent({
@@ -1097,7 +1131,7 @@ export function TimetablePage() {
 
       return {
         ...current,
-        morningTasks: current.morningTasks.map((task) =>
+        morningTasks: (current.morningTasks ?? []).map((task) =>
           task.taskId === taskId ? { ...task, content } : task,
         ),
         todayDailyPlan: current.todayDailyPlan
@@ -1116,6 +1150,19 @@ export function TimetablePage() {
         ),
       };
     });
+    queryClient.setQueryData(dailyPlanTodayKey, (current: typeof dailyPlan) =>
+      current
+        ? {
+            ...current,
+            morningTasks: current.morningTasks.map((task) =>
+              task.taskId === taskId ? { ...task, content } : task,
+            ),
+            tasks: current.tasks.map((task) =>
+              task.taskId === taskId ? { ...task, content } : task,
+            ),
+          }
+        : current,
+    );
 
     queryClient.setQueryData<TopPick[]>(topPicksQueryKey, (current) =>
       current?.map((topPick) =>
@@ -1589,7 +1636,7 @@ export function TimetablePage() {
     rescheduleSlotMutation,
   ]);
 
-  if (homeQuery.isLoading) {
+  if (homeQuery.isLoading || dailyPlanQuery.isLoading) {
     return (
       <section className={styles.centerState} aria-live="polite">
         <img src={characterDefault} alt="" aria-hidden="true" />
@@ -1598,15 +1645,18 @@ export function TimetablePage() {
     );
   }
 
-  if (homeQuery.isError) {
+  if (homeQuery.isError || dailyPlanQuery.isError) {
     return (
       <section className={styles.centerState} aria-live="assertive">
         <img src={characterDefault} alt="" aria-hidden="true" />
         <h1>오늘 시간표를 불러오지 못했습니다.</h1>
-        <p>{getErrorMessage(homeQuery.error)}</p>
+        <p>{getErrorMessage(homeQuery.error ?? dailyPlanQuery.error)}</p>
         <button
           className={styles.primaryButton}
-          onClick={() => homeQuery.refetch()}
+          onClick={() => {
+            homeQuery.refetch();
+            dailyPlanQuery.refetch();
+          }}
           type="button"
         >
           다시 시도
@@ -1619,31 +1669,45 @@ export function TimetablePage() {
     return null;
   }
 
-  if (home.behaviorProfile === null) {
+  if (
+    home.behaviorProfile === null ||
+    behaviorProfileQuery.data === null ||
+    behaviorProfileQuery.isError
+  ) {
     return <Navigate to="/onboarding" replace />;
   }
 
+  const homeWithDailyPlan = dailyPlan
+    ? {
+        ...home,
+        morningTasks: dailyPlan.morningTasks,
+        todayDailyPlan: dailyPlan,
+      }
+    : home;
   const dateParts = getDisplayDateParts(home.targetDate);
   const nextExamLabel = getNextExamLabel(home);
   const friendAccountabilityText = getFriendAccountabilityText(
     home.friendAccountability,
   );
   const sourceTopPicks = topPicksQuery.data ?? home.topPicks;
-  const todayTopPicks = getTodayTopPicks(home, sourceTopPicks);
+  const todayTopPicks = getTodayTopPicks(homeWithDailyPlan, sourceTopPicks);
   const assignedTopPickIds = getAssignedTopPickIds(todayTopPicks, sortedSlots);
   const topPickPlacementNeedsRefresh = needsTopPickPlacementRefresh({
     slots: sortedSlots,
     timetable,
     topPicks: todayTopPicks,
   });
-  const taskCompletionById = getTaskCompletionById(home, sourceTopPicks);
-  const taskById = getTaskById(home);
+  const taskCompletionById = getTaskCompletionById(
+    homeWithDailyPlan,
+    sourceTopPicks,
+  );
+  const taskById = getTaskById(homeWithDailyPlan);
   const generalTasks = getGeneralTasks(
-    home.todayDailyPlan?.tasks ?? [],
+    homeWithDailyPlan.todayDailyPlan?.tasks ?? [],
     todayTopPicks,
   );
   const { taskDrafts, topPickDrafts } = createAssignmentDrafts(
-    home,
+    homeWithDailyPlan,
     sortedSlots,
     sourceTopPicks,
   );
