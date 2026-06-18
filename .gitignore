@@ -18,3 +18,6 @@ npm-debug.log*
 
 # Local debug screenshots and other tmp- prefixed scratch files
 tmp-*
+
+# Codex/agent scratch logs
+.codex-*.log
