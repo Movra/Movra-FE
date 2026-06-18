@@ -1,6 +1,7 @@
 import { apiRequest } from "../../shared/api/client";
 
 type AuthenticatedRequest = {
+  signal?: AbortSignal;
   token: string;
 };
 
@@ -56,43 +57,53 @@ function targetDateQuery(targetDate: string) {
   return `targetDate=${encodeURIComponent(targetDate)}`;
 }
 
-export function getDailyFocusStatistics({ targetDate, token }: TargetDateRequest) {
+export function getDailyFocusStatistics({
+  signal,
+  targetDate,
+  token,
+}: TargetDateRequest) {
   return apiRequest<FocusStatisticsSummary>(
     `/focus-statistics/daily?${targetDateQuery(targetDate)}`,
-    { token },
+    { signal, token },
   );
 }
 
-export function getWeeklyFocusStatistics({ targetDate, token }: TargetDateRequest) {
+export function getWeeklyFocusStatistics({
+  signal,
+  targetDate,
+  token,
+}: TargetDateRequest) {
   return apiRequest<FocusStatisticsSummary>(
     `/focus-statistics/weekly?${targetDateQuery(targetDate)}`,
-    { token },
+    { signal, token },
   );
 }
 
 export function getMonthlyFocusStatistics({
+  signal,
   targetDate,
   token,
 }: TargetDateRequest) {
   return apiRequest<FocusStatisticsSummary>(
     `/focus-statistics/monthly?${targetDateQuery(targetDate)}`,
-    { token },
+    { signal, token },
   );
 }
 
 export function getTimeOfDayFocusStatistics({
+  signal,
   targetDate,
   token,
 }: TargetDateRequest) {
   return apiRequest<TimeOfDayFocusStatistics>(
     `/focus-statistics/time-of-day?${targetDateQuery(targetDate)}`,
-    { token },
+    { signal, token },
   );
 }
 
-export function getFocusTimingRecommendation({ token }: AuthenticatedRequest) {
+export function getFocusTimingRecommendation({ signal, token }: AuthenticatedRequest) {
   return apiRequest<FocusTimingRecommendation>(
     "/focus-statistics/timing-recommendation",
-    { token },
+    { signal, token },
   );
 }

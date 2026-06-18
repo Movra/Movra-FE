@@ -2,8 +2,8 @@ import { useQuery } from "@tanstack/react-query";
 import { type ChangeEvent, useEffect, useState } from "react";
 import { Navigate, NavLink } from "react-router-dom";
 
-import characterDefault from "../assets/auth/character-default.png";
-import characterFocus from "../assets/auth/character-focus.png";
+import characterDefault from "../assets/auth/character-default.webp";
+import characterFocus from "../assets/auth/character-focus.webp";
 import { useAuth } from "../features/auth/useAuth";
 import { AppSidebar } from "../features/core-loop/AppSidebar";
 import { getHomeToday } from "../features/core-loop/api";
@@ -529,7 +529,7 @@ export function StatisticsPage() {
 
   const homeQuery = useQuery({
     enabled: Boolean(token),
-    queryFn: () => getHomeToday({ token }),
+    queryFn: ({ signal }) => getHomeToday({ signal, token }),
     queryKey: homeTodayKey,
   });
 
@@ -545,27 +545,27 @@ export function StatisticsPage() {
 
   const dailyQuery = useQuery({
     enabled: statsEnabled,
-    queryFn: () => getDailyFocusStatistics({ targetDate, token }),
+    queryFn: ({ signal }) => getDailyFocusStatistics({ signal, targetDate, token }),
     queryKey: queryKeys.focusStatisticsDaily(targetDate),
   });
   const weeklyQuery = useQuery({
     enabled: statsEnabled,
-    queryFn: () => getWeeklyFocusStatistics({ targetDate, token }),
+    queryFn: ({ signal }) => getWeeklyFocusStatistics({ signal, targetDate, token }),
     queryKey: queryKeys.focusStatisticsWeekly(targetDate),
   });
   const monthlyQuery = useQuery({
     enabled: statsEnabled,
-    queryFn: () => getMonthlyFocusStatistics({ targetDate, token }),
+    queryFn: ({ signal }) => getMonthlyFocusStatistics({ signal, targetDate, token }),
     queryKey: queryKeys.focusStatisticsMonthly(targetDate),
   });
   const timeOfDayQuery = useQuery({
     enabled: statsEnabled,
-    queryFn: () => getTimeOfDayFocusStatistics({ targetDate, token }),
+    queryFn: ({ signal }) => getTimeOfDayFocusStatistics({ signal, targetDate, token }),
     queryKey: queryKeys.focusStatisticsTimeOfDay(targetDate),
   });
   const recommendationQuery = useQuery({
     enabled: Boolean(token && homeQuery.data?.behaviorProfile),
-    queryFn: () => getFocusTimingRecommendation({ token }),
+    queryFn: ({ signal }) => getFocusTimingRecommendation({ signal, token }),
     queryKey: queryKeys.focusStatisticsTimingRecommendation(),
   });
 
@@ -609,8 +609,8 @@ export function StatisticsPage() {
   const friendText = getFriendAccountabilityText(home.friendAccountability);
   const profileSubtitle = getNextExamLabel(home);
   const behaviorProfileHours = getBehaviorProfileHours(
-    home.behaviorProfile.preferredFocusStartHour,
-    home.behaviorProfile.preferredFocusEndHour,
+    home.behaviorProfile?.preferredFocusStartHour,
+    home.behaviorProfile?.preferredFocusEndHour,
   );
   const visibleRecommendations = getVisibleRecommendations(
     recommendationQuery.data,
