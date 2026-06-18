@@ -9,7 +9,7 @@ import {
 } from "react";
 import { Navigate } from "react-router-dom";
 
-import characterDefault from "../assets/auth/character-default.png";
+import characterDefault from "../assets/auth/character-default.webp";
 import { recordAnalyticsEventSafely } from "../features/analytics/api";
 import { useAuth } from "../features/auth/useAuth";
 import { AppSidebar } from "../features/core-loop/AppSidebar";
@@ -137,7 +137,7 @@ export function FutureVisionPage() {
 
   const homeQuery = useQuery({
     enabled: Boolean(token),
-    queryFn: () => getHomeToday({ token }),
+    queryFn: ({ signal }) => getHomeToday({ signal, token }),
     queryKey: homeTodayKey,
   });
 

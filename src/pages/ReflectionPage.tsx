@@ -8,7 +8,7 @@ import {
 } from "react";
 import { Navigate, useSearchParams } from "react-router-dom";
 
-import characterDefault from "../assets/auth/character-default.png";
+import characterDefault from "../assets/auth/character-default.webp";
 import { recordAnalyticsEventSafely } from "../features/analytics/api";
 import { useAuth } from "../features/auth/useAuth";
 import { AppSidebar } from "../features/core-loop/AppSidebar";
@@ -106,19 +106,19 @@ export function ReflectionPage() {
 
   const homeQuery = useQuery({
     enabled: Boolean(token),
-    queryFn: () => getHomeToday({ token }),
+    queryFn: ({ signal }) => getHomeToday({ signal, token }),
     queryKey: homeTodayKey,
   });
   const targetDate = dateOverride ?? homeQuery.data?.targetDate ?? "";
   const dailyReflectionKey = queryKeys.dailyReflection(targetDate);
   const dailyReflectionQuery = useQuery({
     enabled: Boolean(token && targetDate),
-    queryFn: () => getDailyReflection({ targetDate, token }),
+    queryFn: ({ signal }) => getDailyReflection({ signal, targetDate, token }),
     queryKey: dailyReflectionKey,
   });
   const tinyWinsQuery = useQuery({
     enabled: Boolean(token),
-    queryFn: () => getTinyWins({ token }),
+    queryFn: ({ signal }) => getTinyWins({ signal, token }),
     queryKey: tinyWinsKey,
   });
 

@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type FormEvent, useState } from "react";
 import { Navigate } from "react-router-dom";
 
-import characterDefault from "../assets/auth/character-default.png";
+import characterDefault from "../assets/auth/character-default.webp";
 import { recordAnalyticsEventSafely } from "../features/analytics/api";
 import { useAuth } from "../features/auth/useAuth";
 import { AppSidebar } from "../features/core-loop/AppSidebar";
@@ -156,12 +156,12 @@ export function ExamSchedulesPage() {
 
   const homeQuery = useQuery({
     enabled: Boolean(token),
-    queryFn: () => getHomeToday({ token }),
+    queryFn: ({ signal }) => getHomeToday({ signal, token }),
     queryKey: homeTodayKey,
   });
   const examSchedulesQuery = useQuery({
     enabled: Boolean(token),
-    queryFn: () => getExamSchedules({ token }),
+    queryFn: ({ signal }) => getExamSchedules({ signal, token }),
     queryKey: examSchedulesKey,
   });
 
