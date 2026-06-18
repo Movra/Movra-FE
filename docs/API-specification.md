@@ -2297,78 +2297,127 @@ Authorization: Bearer {token}
 
 ```
 GET /home/today
-Authorization: Bearer {token}
+Authorization: Bearer {accessToken}
 ```
 
-**Response**:
+현재 로그인한 사용자의 홈 화면 요약 데이터를 조회합니다.
+
+**Request Body**: 없음
+
+**Response 200**:
 
 ```json
 {
-  "targetDate": "2026-04-24",
-  "futureVision": null,
-  "todayDailyPlan": {
-    "dailyPlanId": "uuid",
-    "planDate": "2026-04-24",
-    "tasks": [],
-    "morningTasks": []
+  "targetDate": "2026-05-13",
+  "futureVision": {
+    "futureVisionId": "550e8400-e29b-41d4-a716-446655440000",
+    "weeklyVisionImageUrl": "https://example.com/weekly.png",
+    "yearlyVisionImageUrl": "https://example.com/yearly.png",
+    "yearlyVisionDescription": "올해는 수학 1등급을 만든다",
+    "yearlyVisionCreatedAt": "2026-01-01"
   },
-  "morningTasks": [],
-  "topPicks": [],
-  "timetable": null,
-  "focusSessions": {
-    "targetDate": "2026-04-24",
-    "queriedAt": "2026-04-24T03:00:00Z",
-    "totalFocusSeconds": 0,
-    "focusing": false,
-    "sessions": []
+  "topPicks": [
+    {
+      "taskId": "550e8400-e29b-41d4-a716-446655440001",
+      "content": "수학 문제집 3단원",
+      "completed": false,
+      "estimatedMinutes": 30,
+      "memo": "오답 위주로 풀기"
+    }
+  ],
+  "timetable": {
+    "timetableId": "550e8400-e29b-41d4-a716-446655440002",
+    "dailyPlanId": "550e8400-e29b-41d4-a716-446655440003",
+    "topPickTotal": 3,
+    "slots": [
+      {
+        "slotId": "550e8400-e29b-41d4-a716-446655440004",
+        "taskId": "550e8400-e29b-41d4-a716-446655440001",
+        "content": "수학 문제집 3단원",
+        "startTime": "09:00:00",
+        "endTime": "10:00:00",
+        "topPick": true
+      }
+    ]
   },
-  "activeFocusSession": null,
-  "recoveryCard": {
-    "needsRecovery": false,
-    "recoveryType": "NONE",
-    "suggestedAction": null,
-    "suggestedDurationMinutes": null,
-    "yesterdayFocusSeconds": 0,
-    "yesterdayTopPickCompletionRate": 0.0,
-    "postExamMode": false,
-    "recentExamScheduleId": null,
-    "recentExamType": null,
-    "recentExamTitle": null,
-    "recentExamDate": null,
-    "recentExamSubject": null,
-    "daysSinceRecentExam": null,
-    "daysSinceLastSession": null
-  },
-  "behaviorProfile": null,
   "seasonMode": "BASELINE_MODE",
-  "nextExamSchedule": null,
+  "nextExamSchedule": {
+    "examScheduleId": "550e8400-e29b-41d4-a716-446655440005",
+    "examType": "SUNUNG",
+    "title": "수능",
+    "examDate": "2026-11-19",
+    "subject": "전체",
+    "daysUntil": 190,
+    "seasonMode": "BASELINE_MODE"
+  },
   "notificationPreference": {
-    "notificationPreferenceId": "uuid",
-    "dailyFocusEnabled": false,
-    "dailyTopPicksEnabled": false,
-    "dailyTimetableEnabled": false,
-    "accountabilityEnabled": false,
-    "schoolHoursQuietEnabled": true,
+    "notificationPreferenceId": "550e8400-e29b-41d4-a716-446655440006",
+    "dailyFocusEnabled": true,
+    "dailyTopPicksEnabled": true,
+    "dailyTimetableEnabled": true,
+    "accountabilityEnabled": true,
+    "schoolHoursQuietEnabled": false,
     "schoolHoursStart": "08:00",
-    "schoolHoursEnd": "15:30",
+    "schoolHoursEnd": "17:00",
     "weekendSchoolQuietEnabled": false,
     "sleepHoursQuietEnabled": true,
-    "maxDailyPushCount": 3
+    "maxDailyPushCount": 5
   },
   "friendAccountability": {
-    "relationCreated": false,
+    "relationCreated": true,
     "watchedByFriend": false,
     "watchingFriend": false,
-    "inviteCodeStatus": null
+    "inviteCodeStatus": {
+      "inviteCode": "ABCD1234",
+      "expiredAt": "2026-05-13T10:00:00",
+      "expired": false,
+      "reissuable": true,
+      "watcherConnected": false
+    }
   },
   "showFocusTimingCard": false
 }
 ```
 
-**설명**:
-- 오늘 DailyPlan은 없으면 생성된다.
-- Future Vision, Timetable, Behavior Profile, 다음 시험 일정은 없으면 `null`로 내려간다.
-- `showFocusTimingCard`는 가입 후 7일 이상 지난 사용자에게 집중 시간대 추천 카드 노출 여부를 알려준다.
+**Nullable 규칙**:
+
+```json
+{
+  "futureVision": null,
+  "timetable": null,
+  "nextExamSchedule": null,
+  "friendAccountability": {
+    "relationCreated": false,
+    "watchedByFriend": false,
+    "watchingFriend": false,
+    "inviteCodeStatus": null
+  }
+}
+```
+
+- `futureVision`: 미래 비전이 없으면 `null`
+- `timetable`: 오늘 시간표가 없으면 `null`
+- `nextExamSchedule`: 다가오는 시험 일정이 없으면 `null`
+- `friendAccountability.inviteCodeStatus`: `relationCreated=false`면 `null`
+- `inviteCodeStatus.inviteCode`: 발급 전이면 `null`
+- `inviteCodeStatus.expiredAt`: 만료 시간이 없으면 `null`
+
+**제거된 필드**:
+
+아래 필드는 더 이상 `GET /home/today` 응답에 포함하지 않습니다.
+
+```json
+{
+  "todayDailyPlan": "...",
+  "morningTasks": "...",
+  "focusSessions": "...",
+  "activeFocusSession": "...",
+  "recoveryCard": "...",
+  "behaviorProfile": "..."
+}
+```
+
+해당 데이터는 홈 요약 응답이 아니라 각 전용 API에서 조회합니다.
 
 ---
 
