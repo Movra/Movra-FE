@@ -197,6 +197,19 @@ function createHomeToday(exams, futureVision) {
   };
 }
 
+function createInitialAccountabilityState() {
+  return {
+    inviteStatus: null,
+    subjectRelation: null,
+    summary: {
+      days: [{ totalFocusSeconds: 1800 }],
+      targetDate: "2026-05-14",
+      totalFocusSeconds: 1800,
+    },
+    watchingRelations: [],
+  };
+}
+
 function withDaysUntil(values, daysUntil) {
   return {
     daysUntil,
@@ -216,7 +229,9 @@ function createVisualMockServer(options = {}) {
   const weeklyVisionSvg = createVisionSvg("Weekly Vision", "#f7f3ea", "#4f83cc");
   let exams = createInitialExams();
   let futureVision = createFutureVision(host, port);
+  let accountability = createInitialAccountabilityState();
   let nextExamIndex = 10;
+  let nextRelationIndex = 10;
 
   async function handleExamSchedules(request, response, pathname) {
     if (pathname === "/exam-schedules" && request.method === "GET") {
@@ -300,6 +315,184 @@ function createVisualMockServer(options = {}) {
     return false;
   }
 
+  async function handleAccountability(request, response, pathname) {
+    if (pathname === "/accountability-relations/friends" && request.method === "GET") {
+      sendJson(response, {
+        watchedByFriends: accountability.subjectRelation
+          ? [accountability.subjectRelation]
+          : [],
+        watchingFriends: accountability.watchingRelations,
+      });
+      return true;
+    }
+
+    if (
+      pathname === "/accountability-relations/invite-code/status" &&
+      request.method === "GET"
+    ) {
+      if (!accountability.inviteStatus) {
+        sendJson(response, { message: "Accountability relation not found" }, 404);
+        return true;
+      }
+
+      sendJson(response, accountability.inviteStatus);
+      return true;
+    }
+
+    if (pathname === "/accountability-relations" && request.method === "POST") {
+      const body = await readJsonBody(request);
+      accountability.subjectRelation = {
+        accountabilityRelationId: `visual-relation-${nextRelationIndex}`,
+        allowedTargets: Array.isArray(body.targets)
+          ? body.targets
+          : ["FOCUS_SESSION"],
+        subjectUserId: "visual-subject",
+        watcherConnected: false,
+        watcherUserId: null,
+      };
+      nextRelationIndex += 1;
+      accountability.inviteStatus = {
+        expired: false,
+        expiredAt: "2026-05-15T09:00:00",
+        inviteCode: "MOVRA15",
+        reissuable: true,
+        watcherConnected: false,
+      };
+      sendEmpty(response);
+      return true;
+    }
+
+    if (pathname === "/accountability-relations/join" && request.method === "POST") {
+      await drainBody(request);
+      accountability.watchingRelations = [
+        {
+          accountabilityRelationId: "visual-watching-relation",
+          allowedTargets: ["FOCUS_SESSION", "TOP_PICKS"],
+          subjectUserId: "visual-friend",
+          watcherConnected: true,
+          watcherUserId: "visual-current-user",
+        },
+      ];
+      sendEmpty(response);
+      return true;
+    }
+
+    if (
+      pathname === "/accountability-relations/invite-code/reissue" &&
+      request.method === "POST"
+    ) {
+      accountability.inviteStatus = {
+        expired: false,
+        expiredAt: "2026-05-15T10:00:00",
+        inviteCode: "MOVRA20",
+        reissuable: true,
+        watcherConnected: false,
+      };
+      sendJson(response, {
+        expiresAt: "2026-05-15T10:00:00",
+        inviteCode: "MOVRA20",
+      });
+      return true;
+    }
+
+    if (
+      pathname === "/accountability-relations/visibility-policy" &&
+      request.method === "PATCH"
+    ) {
+      const body = await readJsonBody(request);
+      accountability.subjectRelation = {
+        ...(accountability.subjectRelation ?? {
+          accountabilityRelationId: "visual-relation-policy",
+          subjectUserId: "visual-subject",
+          watcherConnected: false,
+          watcherUserId: null,
+        }),
+        allowedTargets: Array.isArray(body.targets)
+          ? body.targets
+          : ["FOCUS_SESSION"],
+      };
+      sendJson(response, accountability.subjectRelation);
+      return true;
+    }
+
+    if (
+      pathname === "/accountability-relations/watcher" &&
+      request.method === "DELETE"
+    ) {
+      if (accountability.subjectRelation) {
+        accountability.subjectRelation = {
+          ...accountability.subjectRelation,
+          watcherConnected: false,
+          watcherUserId: null,
+        };
+      }
+      if (accountability.inviteStatus) {
+        accountability.inviteStatus = {
+          ...accountability.inviteStatus,
+          reissuable: true,
+          watcherConnected: false,
+        };
+      }
+      sendEmpty(response);
+      return true;
+    }
+
+    if (
+      pathname === "/accountability-relations/watching" &&
+      request.method === "DELETE"
+    ) {
+      accountability.watchingRelations = [];
+      sendEmpty(response);
+      return true;
+    }
+
+    if (
+      pathname === "/accountability-relations/watcher/focus-sessions" &&
+      request.method === "GET"
+    ) {
+      sendJson(response, accountability.summary);
+      return true;
+    }
+
+    if (
+      pathname === "/accountability-relations/watcher/focus-sessions/range" &&
+      request.method === "GET"
+    ) {
+      sendJson(response, {
+        days: [
+          { targetDate: "2026-05-13", totalFocusSeconds: 1200 },
+          { targetDate: "2026-05-14", totalFocusSeconds: 1800 },
+        ],
+      });
+      return true;
+    }
+
+    if (
+      pathname === "/accountability-relations/watcher/top-picks" &&
+      request.method === "GET"
+    ) {
+      sendJson(response, {
+        targetDate: "2026-05-14",
+        topPicks: [{ content: "Visual smoke TopPick", completed: false }],
+        totalTopPickCount: 1,
+      });
+      return true;
+    }
+
+    if (
+      pathname === "/accountability-relations/watcher/timetable-tasks" &&
+      request.method === "GET"
+    ) {
+      sendJson(response, {
+        targetDate: "2026-05-14",
+        timetableTasks: [{ content: "Visual smoke task", completed: true }],
+      });
+      return true;
+    }
+
+    return false;
+  }
+
   const server = http.createServer(async (request, response) => {
     const url = new URL(request.url, `http://${host}:${port}`);
 
@@ -321,6 +514,20 @@ function createVisualMockServer(options = {}) {
 
     if (url.pathname === "/home/today") {
       sendJson(response, createHomeToday(exams, futureVision));
+      return;
+    }
+
+    if (url.pathname === "/behavior-profiles/me") {
+      sendJson(response, createHomeToday(exams, futureVision).behaviorProfile);
+      return;
+    }
+
+    if (url.pathname === "/focus-sessions/today") {
+      sendJson(response, createHomeToday(exams, futureVision).focusSessions);
+      return;
+    }
+
+    if (await handleAccountability(request, response, url.pathname)) {
       return;
     }
 
