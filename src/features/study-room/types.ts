@@ -21,6 +21,7 @@ export type StudyRoomParticipant = {
 export type StudyRoomDetail = {
   roomId: string;
   name: string;
+  visibility: RoomVisibility;
   leaderUserId: string;
   currentCount: number;
   createdAt: string;
@@ -36,6 +37,10 @@ export type MyParticipation = {
 
 export type CreateStudyRoomResponse = {
   roomId: string;
+  inviteCode?: string | null;
+};
+
+export type StudyRoomInviteCodeResponse = {
   inviteCode: string | null;
 };
 

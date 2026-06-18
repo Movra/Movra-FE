@@ -1,6 +1,6 @@
 import { type FormEvent } from "react";
 
-import characterSuccess from "../../assets/auth/character-success.png";
+import characterSuccess from "../../assets/auth/character-success.webp";
 import type { RoomVisibility } from "./types";
 import styles from "../../pages/StudyRoomPage.module.css";
 

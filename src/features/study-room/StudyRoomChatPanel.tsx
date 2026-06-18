@@ -1,4 +1,10 @@
-import { type FormEvent, useState } from "react";
+import {
+  type FormEvent,
+  type KeyboardEvent,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 
 import type { StudyRoomChatStatus } from "./chatClient";
 import type { SessionMode } from "./types";
@@ -71,10 +77,24 @@ export function StudyRoomChatPanel({
   });
   const [draft, setDraft] = useState("");
   const [localError, setLocalError] = useState<string | null>(null);
+  const messageListRef = useRef<HTMLDivElement | null>(null);
   const blockedMessage = getBlockedMessage(sessionMode);
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  function scrollToLatestMessage() {
+    const messageList = messageListRef.current;
+
+    if (!messageList) {
+      return;
+    }
+
+    messageList.scrollTop = messageList.scrollHeight;
+  }
+
+  useEffect(() => {
+    scrollToLatestMessage();
+  }, [messages]);
+
+  function submitDraft() {
     const content = draft.trim();
 
     if (!canChat) {
@@ -96,11 +116,30 @@ export function StudyRoomChatPanel({
       sendMessage(content);
       setDraft("");
       setLocalError(null);
+      scrollToLatestMessage();
     } catch (error) {
       setLocalError(
         error instanceof Error ? error.message : "메시지를 보내지 못했습니다.",
       );
     }
+  }
+
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    submitDraft();
+  }
+
+  function handleTextareaKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
+    if (
+      event.key !== "Enter" ||
+      event.shiftKey ||
+      event.nativeEvent.isComposing
+    ) {
+      return;
+    }
+
+    event.preventDefault();
+    submitDraft();
   }
 
   return (
@@ -119,18 +158,25 @@ export function StudyRoomChatPanel({
         <p className={styles.availableNotice}>휴식 상태에서 채팅할 수 있습니다.</p>
       )}
 
-      {serverError ? (
-        <p className={styles.error} role="alert">
-          {serverError.message}
-        </p>
-      ) : null}
-      {localError ? (
-        <p className={styles.error} role="alert">
-          {localError}
-        </p>
-      ) : null}
+      <div className={styles.feedbackStack}>
+        {serverError ? (
+          <p className={styles.error} role="alert">
+            {serverError.message}
+          </p>
+        ) : null}
+        {localError ? (
+          <p className={styles.error} role="alert">
+            {localError}
+          </p>
+        ) : null}
+      </div>
 
-      <div className={styles.messageList} role="log" aria-live="polite">
+      <div
+        className={styles.messageList}
+        ref={messageListRef}
+        role="log"
+        aria-live="polite"
+      >
         {messages.length === 0 ? (
           <p className={styles.emptyText}>
             현재 연결 이후 받은 메시지가 없습니다.
@@ -156,6 +202,7 @@ export function StudyRoomChatPanel({
           메시지
           <textarea
             disabled={!canChat}
+            onKeyDown={handleTextareaKeyDown}
             onChange={(event) => setDraft(event.target.value)}
             placeholder={
               canChat ? "짧은 휴식 상태를 공유해 보세요." : "채팅을 사용할 수 없습니다."

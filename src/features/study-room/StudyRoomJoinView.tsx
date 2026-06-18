@@ -1,6 +1,6 @@
 import { NavLink } from "react-router-dom";
 
-import characterDefault from "../../assets/auth/character-default.png";
+import characterDefault from "../../assets/auth/character-default.webp";
 import type { MyParticipation, StudyRoomSummary } from "./types";
 import styles from "../../pages/StudyRoomPage.module.css";
 

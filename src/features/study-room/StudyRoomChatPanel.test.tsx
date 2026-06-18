@@ -71,6 +71,33 @@ describe("StudyRoomChatPanel", () => {
     expect(screen.getByLabelText("메시지")).toHaveValue("");
   });
 
+  it("sends with Enter and keeps Shift+Enter as a newline", async () => {
+    const { user } = setup("REST");
+    const textbox = screen.getByRole("textbox");
+
+    await user.type(textbox, "바로 보낼게");
+    await user.keyboard("{Enter}");
+
+    expect(sendMessageMock).toHaveBeenCalledWith("바로 보낼게");
+    expect(textbox).toHaveValue("");
+
+    await user.type(textbox, "첫 줄");
+    await user.keyboard("{Shift>}{Enter}{/Shift}");
+    await user.type(textbox, "둘째 줄");
+
+    expect(sendMessageMock).toHaveBeenCalledTimes(1);
+    expect(textbox).toHaveValue("첫 줄\n둘째 줄");
+  });
+
+  it("keeps the REST chat form available without feedback messages", () => {
+    setup("REST");
+
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(screen.getByRole("log")).toBeInTheDocument();
+    expect(screen.getByRole("textbox")).toBeEnabled();
+    expect(screen.getByRole("button")).toBeEnabled();
+  });
+
   it.each([
     ["WAITING", "휴식 상태로 전환하면 채팅을 사용할 수 있습니다."],
     ["FOCUS", "집중 중에는 채팅을 잠시 막아 둡니다."],
@@ -115,6 +142,11 @@ describe("StudyRoomChatPanel", () => {
 
   it("renders received room messages", async () => {
     setup("REST");
+    const messageList = screen.getByRole("log");
+    Object.defineProperty(messageList, "scrollHeight", {
+      configurable: true,
+      value: 640,
+    });
 
     await waitFor(() => expect(createClientMock).toHaveBeenCalled());
     act(() => {
@@ -129,6 +161,7 @@ describe("StudyRoomChatPanel", () => {
 
     expect(screen.getByText("Joon")).toBeInTheDocument();
     expect(screen.getByText("Rest starts now.")).toBeInTheDocument();
+    await waitFor(() => expect(messageList.scrollTop).toBe(640));
   });
 
   it("shows server error queue messages", async () => {

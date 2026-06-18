@@ -1,6 +1,6 @@
 import { NavLink } from "react-router-dom";
 
-import characterFocus from "../../assets/auth/character-focus.png";
+import characterFocus from "../../assets/auth/character-focus.webp";
 import styles from "../../pages/StudyRoomPage.module.css";
 
 type StudyRoomHomeViewProps = {

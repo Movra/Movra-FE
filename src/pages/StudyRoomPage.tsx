@@ -1,23 +1,34 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { type FormEvent, useEffect, useMemo, useState } from "react";
+import {
+  type FormEvent,
+  lazy,
+  memo,
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { NavLink, useLocation, useNavigate, useParams } from "react-router-dom";
 
-import characterDefault from "../assets/auth/character-default.png";
-import characterFocus from "../assets/auth/character-focus.png";
-import characterSuccess from "../assets/auth/character-success.png";
+import characterDefault from "../assets/auth/character-default.webp";
+import characterFocus from "../assets/auth/character-focus.webp";
+import characterSuccess from "../assets/auth/character-success.webp";
 import { useAuth } from "../features/auth/useAuth";
 import { AppSidebar } from "../features/core-loop/AppSidebar";
-import { StudyRoomChatPanel } from "../features/study-room/StudyRoomChatPanel";
 import {
   createStudyRoom,
   getMyParticipations,
   getPublicStudyRooms,
   getStudyRoom,
+  getStudyRoomInviteCode,
   getStudyRoomParticipants,
   joinStudyRoom,
   joinStudyRoomByInvite,
   kickStudyRoomParticipant,
   leaveStudyRoom,
+  reissueStudyRoomInviteCode,
   startStudyRoomFocus,
   switchStudyRoomBreak,
 } from "../features/study-room/api";
@@ -34,6 +45,12 @@ import { getErrorMessage } from "../shared/api/errors";
 import { queryKeys } from "../shared/queryKeys";
 import { PageHeader } from "../shared/ui/PageHeader";
 import styles from "./StudyRoomPage.module.css";
+
+const StudyRoomChatPanel = lazy(() =>
+  import("../features/study-room/StudyRoomChatPanel").then((module) => ({
+    default: module.StudyRoomChatPanel,
+  })),
+);
 
 type CreateRoomForm = {
   name: string;
@@ -63,6 +80,7 @@ const sessionModeLabels: Record<SessionMode, string> = {
 const emptyPublicRooms: StudyRoomSummary[] = [];
 const emptyMyParticipations: MyParticipation[] = [];
 const unknownRoomName = "참여 중인 방";
+const actionNoticeDurationMs = 3000;
 
 function getRoomPath(roomId: string) {
   return `/study-room/rooms/${encodeURIComponent(roomId)}`;
@@ -240,6 +258,72 @@ function getParticipantFocusSeconds({
     : null;
 }
 
+function useSecondTicker(enabled: boolean) {
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    if (!enabled) {
+      return undefined;
+    }
+
+    const intervalId = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(intervalId);
+  }, [enabled]);
+
+  return now;
+}
+
+const StudyRoomFocusClock = memo(function StudyRoomFocusClock({
+  currentUserId,
+  localFocusStartedAt,
+  participant,
+}: {
+  currentUserId: string | null;
+  localFocusStartedAt: number | null;
+  participant: StudyRoomParticipant;
+}) {
+  const now = useSecondTicker(participant.sessionMode === "FOCUS");
+  const focusSeconds = getParticipantFocusSeconds({
+    currentUserId,
+    localFocusStartedAt,
+    now,
+    participant,
+  });
+
+  return <>{focusSeconds === null ? "집중 시간 동기화 대기" : formatFocusClock(focusSeconds)}</>;
+});
+
+const ParticipantFocusStatus = memo(function ParticipantFocusStatus({
+  currentUserId,
+  localFocusStartedAt,
+  participant,
+}: {
+  currentUserId: string | null;
+  localFocusStartedAt: number | null;
+  participant: StudyRoomParticipant;
+}) {
+  const now = useSecondTicker(participant.sessionMode === "FOCUS");
+
+  if (participant.sessionMode !== "FOCUS") {
+    return <>{`${sessionModeLabels[participant.sessionMode]} 상태`}</>;
+  }
+
+  const focusSeconds = getParticipantFocusSeconds({
+    currentUserId,
+    localFocusStartedAt,
+    now,
+    participant,
+  });
+
+  return (
+    <>
+      {focusSeconds === null
+        ? "집중 시간 동기화 대기"
+        : `집중 ${formatFocusClock(focusSeconds)}`}
+    </>
+  );
+});
+
 function getStatusClassName(sessionMode: SessionMode) {
   return [styles.statusPill, styles[`status${sessionMode}`]]
     .filter(Boolean)
@@ -248,6 +332,32 @@ function getStatusClassName(sessionMode: SessionMode) {
 
 function getInitial(value: string) {
   return value.trim().charAt(0).toUpperCase() || "?";
+}
+
+function inferRoomVisibility({
+  createdRoom,
+  publicRooms,
+  selectedRoom,
+}: {
+  createdRoom: CreatedRoom | null;
+  publicRooms: StudyRoomSummary[];
+  selectedRoom: StudyRoomDetail | null;
+}): RoomVisibility | null {
+  if (!selectedRoom) {
+    return null;
+  }
+
+  if (selectedRoom.visibility) {
+    return selectedRoom.visibility;
+  }
+
+  if (createdRoom?.roomId === selectedRoom.roomId) {
+    return createdRoom.visibility;
+  }
+
+  return publicRooms.some((room) => room.roomId === selectedRoom.roomId)
+    ? "PUBLIC"
+    : "PRIVATE";
 }
 
 export function StudyRoomPage() {
@@ -259,7 +369,6 @@ export function StudyRoomPage() {
   const { roomId: routeRoomIdParam } = useParams();
   const routeRoomId = routeRoomIdParam ?? "";
   const routeMode = getRouteMode(location.pathname, routeRoomId);
-  const [now, setNow] = useState(() => Date.now());
   const [localFocusStartedAtByRoom, setLocalFocusStartedAtByRoom] = useState<
     Record<string, number>
   >({});
@@ -271,20 +380,27 @@ export function StudyRoomPage() {
     inviteCode: "",
   });
   const [createdRoom, setCreatedRoom] = useState<CreatedRoom | null>(null);
+  const [inviteModalRoom, setInviteModalRoom] = useState<CreatedRoom | null>(
+    null,
+  );
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [inviteJoinModalOpen, setInviteJoinModalOpen] = useState(false);
   const [inviteModalOpen, setInviteModalOpen] = useState(false);
+  const [memberModalOpen, setMemberModalOpen] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [actionNotice, setActionNotice] = useState<string | null>(null);
+  const joinedRoomIdsRef = useRef<Set<string>>(new Set());
+  const leavingRoomIdsRef = useRef<Set<string>>(new Set());
+  const redirectedRoomRemovalIdsRef = useRef<Set<string>>(new Set());
 
   const publicRoomsQuery = useQuery({
     enabled: Boolean(token),
-    queryFn: () => getPublicStudyRooms({ token }),
+    queryFn: ({ signal }) => getPublicStudyRooms({ signal, token }),
     queryKey: publicRoomsKey,
   });
   const myParticipationsQuery = useQuery({
     enabled: Boolean(token),
-    queryFn: () => getMyParticipations({ token }),
+    queryFn: ({ signal }) => getMyParticipations({ signal, token }),
     queryKey: myParticipationsKey,
   });
   const publicRooms = publicRoomsQuery.data ?? emptyPublicRooms;
@@ -297,12 +413,12 @@ export function StudyRoomPage() {
   const selectedParticipantsKey = queryKeys.studyRoomParticipants(routeRoomId);
   const selectedRoomQuery = useQuery({
     enabled: Boolean(token && routeRoomId),
-    queryFn: () => getStudyRoom({ roomId: routeRoomId, token }),
+    queryFn: ({ signal }) => getStudyRoom({ roomId: routeRoomId, signal, token }),
     queryKey: selectedRoomKey,
   });
   const participantsQuery = useQuery({
     enabled: Boolean(token && routeRoomId),
-    queryFn: () => getStudyRoomParticipants({ roomId: routeRoomId, token }),
+    queryFn: ({ signal }) => getStudyRoomParticipants({ roomId: routeRoomId, signal, token }),
     queryKey: selectedParticipantsKey,
   });
   const selectedRoom = selectedRoomQuery.data ?? null;
@@ -313,24 +429,56 @@ export function StudyRoomPage() {
       ),
     [participantsQuery.data, selectedRoomQuery.data?.participants],
   );
-  const hasFocusingParticipant = selectedParticipants.some(
-    (participant) => participant.sessionMode === "FOCUS",
+  const detailError = selectedRoomQuery.error ?? participantsQuery.error;
+  const detailLoading =
+    Boolean(routeRoomId) &&
+    (selectedRoomQuery.isLoading || participantsQuery.isLoading);
+  const currentParticipant = getCurrentParticipant(
+    selectedParticipants,
+    selectedParticipation,
   );
-
-  useEffect(() => {
-    if (!hasFocusingParticipant) {
-      return undefined;
-    }
-
-    const intervalId = window.setInterval(() => setNow(Date.now()), 1000);
-    return () => window.clearInterval(intervalId);
-  }, [hasFocusingParticipant]);
+  const currentUserId = currentParticipant?.userId ?? null;
+  const isSelectedRoomLeader = Boolean(
+    selectedRoom && currentUserId && selectedRoom.leaderUserId === currentUserId,
+  );
+  const selectedRoomVisibility = inferRoomVisibility({
+    createdRoom,
+    publicRooms,
+    selectedRoom,
+  });
+  const selectedSessionMode = selectedParticipation?.sessionMode ?? null;
+  const canStartFocus =
+    selectedSessionMode !== null &&
+    selectedSessionMode !== "FOCUS" &&
+    selectedSessionMode !== "ENDED";
+  const canSwitchBreak =
+    selectedSessionMode === "WAITING" || selectedSessionMode === "FOCUS";
+  const canLeaveRoom =
+    selectedSessionMode !== null && selectedSessionMode !== "ENDED";
+  const canShowInviteCode =
+    isSelectedRoomLeader && selectedRoomVisibility === "PRIVATE";
 
   useEffect(() => {
     if (routeMode === "create") {
       setCreateModalOpen(true);
     }
   }, [routeMode]);
+
+  useEffect(() => {
+    setMemberModalOpen(false);
+  }, [routeRoomId]);
+
+  useEffect(() => {
+    if (!actionNotice) {
+      return undefined;
+    }
+
+    const timeoutId = window.setTimeout(
+      () => setActionNotice(null),
+      actionNoticeDurationMs,
+    );
+    return () => window.clearTimeout(timeoutId);
+  }, [actionNotice]);
 
   function closeCreateModal() {
     setCreateModalOpen(false);
@@ -367,6 +515,101 @@ export function StudyRoomPage() {
     ]);
   }
 
+  const redirectAfterRoomRemoval = useCallback(
+    (roomId: string) => {
+      if (redirectedRoomRemovalIdsRef.current.has(roomId)) {
+        return;
+      }
+
+      redirectedRoomRemovalIdsRef.current.add(roomId);
+      queryClient.setQueryData<MyParticipation[]>(
+        myParticipationsKey,
+        (current) =>
+          current?.filter((participation) => participation.roomId !== roomId) ??
+          current,
+      );
+      setLocalFocusStartedAtByRoom((current) => {
+        const next = { ...current };
+        delete next[roomId];
+        return next;
+      });
+      setMemberModalOpen(false);
+      setActionError(null);
+      setActionNotice("방에서 내보내졌어요.");
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.studyRoomParticipants(roomId),
+      });
+      queryClient.removeQueries({
+        exact: true,
+        queryKey: queryKeys.studyRoom(roomId),
+      });
+      navigate("/study-room", { replace: true });
+    },
+    [navigate, queryClient],
+  );
+
+  useEffect(() => {
+    redirectedRoomRemovalIdsRef.current.clear();
+    leavingRoomIdsRef.current.clear();
+  }, [routeRoomId]);
+
+  useEffect(() => {
+    if (
+      routeMode !== "room" ||
+      !routeRoomId ||
+      leavingRoomIdsRef.current.has(routeRoomId) ||
+      detailLoading ||
+      detailError ||
+      !selectedRoom ||
+      !selectedParticipation ||
+      currentParticipant
+    ) {
+      return;
+    }
+
+    redirectAfterRoomRemoval(routeRoomId);
+  }, [
+    currentParticipant,
+    detailError,
+    detailLoading,
+    redirectAfterRoomRemoval,
+    routeMode,
+    routeRoomId,
+    selectedParticipation,
+    selectedRoom,
+  ]);
+
+  useEffect(() => {
+    if (
+      routeMode !== "room" ||
+      !routeRoomId ||
+      leavingRoomIdsRef.current.has(routeRoomId) ||
+      myParticipationsQuery.isLoading ||
+      selectedParticipation ||
+      !joinedRoomIdsRef.current.has(routeRoomId)
+    ) {
+      return;
+    }
+
+    redirectAfterRoomRemoval(routeRoomId);
+  }, [
+    myParticipationsQuery.isLoading,
+    redirectAfterRoomRemoval,
+    routeMode,
+    routeRoomId,
+    selectedParticipation,
+  ]);
+
+  useEffect(() => {
+    if (!myParticipationsQuery.isSuccess) {
+      return;
+    }
+
+    joinedRoomIdsRef.current = new Set(
+      myParticipations.map((participation) => participation.roomId),
+    );
+  }, [myParticipations, myParticipationsQuery.isSuccess]);
+
   const createRoomMutation = useMutation({
     mutationFn: (values: CreateRoomForm) =>
       createStudyRoom({
@@ -379,17 +622,28 @@ export function StudyRoomPage() {
       setActionError(getErrorMessage(error));
     },
     onSuccess: async (response, values) => {
+      const inviteCode =
+        values.visibility === "PRIVATE" ? response.inviteCode ?? null : null;
+      const shouldOpenInviteModal = values.visibility === "PRIVATE";
+      const nextCreatedRoom = {
+        inviteCode,
+        name: values.name,
+        roomId: response.roomId,
+        visibility: values.visibility,
+      };
+
       setActionError(null);
       setActionNotice("스터디룸을 만들었어요.");
-      setCreatedRoom({
-        ...response,
-        name: values.name,
-        visibility: values.visibility,
-      });
+      setCreatedRoom(nextCreatedRoom);
       setCreateModalOpen(false);
-      setInviteModalOpen(true);
+      setInviteModalRoom(shouldOpenInviteModal ? nextCreatedRoom : null);
+      setInviteModalOpen(shouldOpenInviteModal);
       setCreateForm((current) => ({ ...current, name: "" }));
       await refreshStudyRooms(response.roomId);
+
+      if (!shouldOpenInviteModal) {
+        navigate(getRoomPath(response.roomId));
+      }
     },
   });
 
@@ -450,6 +704,53 @@ export function StudyRoomPage() {
     },
   });
 
+  const inviteCodeQueryMutation = useMutation({
+    mutationFn: ({ roomId }: { name: string; roomId: string }) =>
+      getStudyRoomInviteCode({ roomId, token }),
+    onError: (error) => {
+      setActionNotice(null);
+      setActionError(getErrorMessage(error));
+    },
+    onSuccess: (response, values) => {
+      const nextInviteRoom: CreatedRoom = {
+        inviteCode: response.inviteCode,
+        name: values.name,
+        roomId: values.roomId,
+        visibility: "PRIVATE",
+      };
+
+      setActionError(null);
+      setInviteModalRoom(nextInviteRoom);
+      setInviteModalOpen(true);
+      setCreatedRoom((current) =>
+        current?.roomId === values.roomId ? nextInviteRoom : current,
+      );
+    },
+  });
+
+  const reissueInviteCodeMutation = useMutation({
+    mutationFn: (roomId: string) =>
+      reissueStudyRoomInviteCode({ roomId, token }),
+    onError: (error) => {
+      setActionNotice(null);
+      setActionError(getErrorMessage(error));
+    },
+    onSuccess: (response, roomId) => {
+      setActionError(null);
+      setActionNotice("초대 코드를 다시 생성했어요.");
+      setInviteModalRoom((current) =>
+        current?.roomId === roomId
+          ? { ...current, inviteCode: response.inviteCode }
+          : current,
+      );
+      setCreatedRoom((current) =>
+        current?.roomId === roomId
+          ? { ...current, inviteCode: response.inviteCode }
+          : current,
+      );
+    },
+  });
+
   const leaveRoomMutation = useMutation({
     mutationFn: (roomId: string) => leaveStudyRoom({ roomId, token }),
     onError: (error) => {
@@ -457,6 +758,7 @@ export function StudyRoomPage() {
       setActionError(getErrorMessage(error));
     },
     onSuccess: async (_result, roomId) => {
+      leavingRoomIdsRef.current.add(roomId);
       setActionError(null);
       setActionNotice("스터디룸에서 나갔어요.");
       setLocalFocusStartedAtByRoom((current) => {
@@ -497,7 +799,6 @@ export function StudyRoomPage() {
     onSuccess: async (_result, roomId) => {
       setActionError(null);
       setActionNotice("집중 상태로 전환했어요.");
-      setNow(Date.now());
       setLocalFocusStartedAtByRoom((current) => ({
         ...current,
         [roomId]: Date.now(),
@@ -596,8 +897,23 @@ export function StudyRoomPage() {
     });
   }
 
+  function openSelectedRoomInviteCode() {
+    if (
+      !selectedRoom ||
+      selectedRoomVisibility !== "PRIVATE" ||
+      !isSelectedRoomLeader
+    ) {
+      return;
+    }
+
+    inviteCodeQueryMutation.mutate({
+      name: selectedRoom.name,
+      roomId: selectedRoom.roomId,
+    });
+  }
+
   async function handleCopyInviteInfo() {
-    if (!createdRoom) {
+    if (!inviteModalRoom) {
       return;
     }
 
@@ -607,9 +923,9 @@ export function StudyRoomPage() {
       return;
     }
 
-    const inviteText = createdRoom.inviteCode
-      ? `초대 코드: ${createdRoom.inviteCode}`
-      : `방 ID: ${createdRoom.roomId}`;
+    const inviteText = inviteModalRoom.inviteCode
+      ? `초대 코드: ${inviteModalRoom.inviteCode}`
+      : `방 ID: ${inviteModalRoom.roomId}`;
 
     try {
       await navigator.clipboard.writeText(inviteText);
@@ -621,65 +937,71 @@ export function StudyRoomPage() {
     }
   }
 
-  const detailError = selectedRoomQuery.error ?? participantsQuery.error;
-  const detailLoading =
-    Boolean(routeRoomId) &&
-    (selectedRoomQuery.isLoading || participantsQuery.isLoading);
-  const currentParticipant = getCurrentParticipant(
-    selectedParticipants,
-    selectedParticipation,
-  );
-  const currentUserId = currentParticipant?.userId ?? null;
-  const currentFocusSeconds = currentParticipant
-    ? getParticipantFocusSeconds({
-        currentUserId,
-        localFocusStartedAt: routeRoomId
-          ? localFocusStartedAtByRoom[routeRoomId] ?? null
-          : null,
-        now,
-        participant: currentParticipant,
-      })
-    : null;
-  const isSelectedRoomLeader = Boolean(
-    selectedRoom && currentUserId && selectedRoom.leaderUserId === currentUserId,
-  );
-  const selectedSessionMode = selectedParticipation?.sessionMode ?? null;
-  const canStartFocus =
-    selectedSessionMode !== null &&
-    selectedSessionMode !== "FOCUS" &&
-    selectedSessionMode !== "ENDED";
-  const canSwitchBreak =
-    selectedSessionMode === "WAITING" || selectedSessionMode === "FOCUS";
-  const canLeaveRoom =
-    selectedSessionMode !== null && selectedSessionMode !== "ENDED";
   const sessionHeroLabel =
-    selectedSessionMode === "FOCUS" && currentFocusSeconds !== null
-      ? formatFocusClock(currentFocusSeconds)
-      : selectedSessionMode === "REST"
-        ? "휴식 중"
-        : selectedSessionMode
-          ? `${sessionModeLabels[selectedSessionMode]} 상태`
-          : "대기";
+    selectedSessionMode === "FOCUS" && currentParticipant ? (
+      <StudyRoomFocusClock
+        currentUserId={currentUserId}
+        localFocusStartedAt={
+          routeRoomId ? localFocusStartedAtByRoom[routeRoomId] ?? null : null
+        }
+        participant={currentParticipant}
+      />
+    ) : selectedSessionMode === "REST" ? (
+      "휴식 중"
+    ) : selectedSessionMode ? (
+      `${sessionModeLabels[selectedSessionMode]} 상태`
+    ) : (
+      "대기"
+    );
   const sessionHeroDescription =
     selectedSessionMode === "FOCUS"
       ? "집중 시간이 흐르고 있습니다."
       : selectedSessionMode === "REST"
         ? "휴식 상태입니다. 지금은 채팅을 사용할 수 있습니다."
         : "집중을 시작하면 이 영역에서 시간이 크게 표시됩니다.";
-  const pageCopy = getPageCopy(routeMode, selectedRoom?.name);
-  const hasOpenModal = createModalOpen || inviteJoinModalOpen || inviteModalOpen;
+  const visibleSelectedRoomName = selectedParticipation
+    ? selectedRoom?.name
+    : undefined;
+  const pageCopy = getPageCopy(routeMode, visibleSelectedRoomName);
+  const hasOpenModal =
+    createModalOpen || inviteJoinModalOpen || inviteModalOpen || memberModalOpen;
   const shouldShowQuickNav = routeMode !== "home" && routeMode !== "create";
   const contentShellClassName =
     routeMode === "room"
       ? `${styles.contentShell} ${styles.roomContentShell}`
       : styles.contentShell;
+  const quickNav = shouldShowQuickNav ? (
+    <nav className={styles.quickNav} aria-label="스터디룸 빠른 이동">
+      <NavLink
+        className={({ isActive }) =>
+          isActive
+            ? `${styles.quickNavLink} ${styles.activeNavLink}`
+            : styles.quickNavLink
+        }
+        end
+        to="/study-room"
+      >
+        내 스터디룸
+      </NavLink>
+      <NavLink
+        className={({ isActive }) =>
+          isActive
+            ? `${styles.quickNavLink} ${styles.activeNavLink}`
+            : styles.quickNavLink
+        }
+        to="/study-room/join"
+      >
+        공개방 확인
+      </NavLink>
+    </nav>
+  ) : null;
 
   return (
     <section className={styles.studyRoomPage} aria-labelledby="study-room-title">
       <AppSidebar
         ariaHidden={hasOpenModal}
         onLogout={logout}
-        profileSubtitle={selectedRoom?.name ?? "스터디룸"}
+        profileSubtitle={visibleSelectedRoomName ?? "스터디룸"}
       />
 
       <div
@@ -694,7 +1016,7 @@ export function StudyRoomPage() {
             title={pageCopy.title}
             titleId="study-room-title"
             actions={
-              routeMode === "room" ? undefined : (
+              routeMode === "room" ? quickNav : (
                 <div className={styles.headerStats} aria-label="스터디룸 요약">
                   <article>
                     <span>공개방</span>
@@ -709,40 +1031,11 @@ export function StudyRoomPage() {
             }
           />
 
-          {shouldShowQuickNav ? (
-            <nav className={styles.quickNav} aria-label="스터디룸 흐름">
-              <NavLink
-                className={({ isActive }) =>
-                  isActive
-                    ? `${styles.quickNavLink} ${styles.activeNavLink}`
-                    : styles.quickNavLink
-                }
-                end
-                to="/study-room"
-              >
-                내 스터디룸
-              </NavLink>
-              <NavLink
-                className={({ isActive }) =>
-                  isActive
-                    ? `${styles.quickNavLink} ${styles.activeNavLink}`
-                    : styles.quickNavLink
-                }
-                to="/study-room/join"
-              >
-                공개방 확인
-              </NavLink>
-            </nav>
-          ) : null}
+          {routeMode !== "room" ? quickNav : null}
 
           {actionError ? (
             <p className={styles.error} role="alert">
               {actionError}
-            </p>
-          ) : null}
-          {actionNotice ? (
-            <p className={styles.success} role="status">
-              {actionNotice}
             </p>
           ) : null}
 
@@ -959,83 +1252,35 @@ export function StudyRoomPage() {
                           방 나가기
                         </button>
                       ) : null}
+                      {canShowInviteCode ? (
+                        <button
+                          className={styles.roomActionButton}
+                          disabled={inviteCodeQueryMutation.isPending}
+                          onClick={openSelectedRoomInviteCode}
+                          type="button"
+                        >
+                          초대 코드 조회/생성
+                        </button>
+                      ) : null}
+                      <button
+                        className={`${styles.roomActionButton} ${styles.roomMemberButton}`}
+                        onClick={() => setMemberModalOpen(true)}
+                        type="button"
+                      >
+                        멤버 조회하기
+                      </button>
                     </div>
                   </div>
-
-                  <aside
-                    className={styles.roomMemberPanel}
-                    aria-labelledby="participants-title"
-                  >
-                    <h2 id="participants-title">방 멤버</h2>
-                    <ul className={styles.participantList}>
-                      {selectedParticipants.map((participant) => {
-                        const focusSeconds = getParticipantFocusSeconds({
-                          currentUserId,
-                          localFocusStartedAt:
-                            localFocusStartedAtByRoom[selectedRoom.roomId] ?? null,
-                          now,
-                          participant,
-                        });
-
-                        return (
-                          <li
-                            className={
-                              participant.userId === currentUserId
-                                ? styles.currentParticipantRow
-                                : undefined
-                            }
-                            key={participant.participantId}
-                          >
-                            <span
-                              className={`${styles.memberAvatar} ${
-                                styles[`member${participant.sessionMode}`]
-                              }`}
-                              aria-hidden="true"
-                            >
-                              {getInitial(participant.participantName)}
-                            </span>
-                            <div>
-                              <strong>{participant.participantName}</strong>
-                              <span>
-                                {participant.sessionMode === "FOCUS"
-                                  ? focusSeconds === null
-                                    ? "집중 시간 동기화 대기"
-                                    : `집중 ${formatFocusClock(focusSeconds)}`
-                                  : `${sessionModeLabels[participant.sessionMode]} 상태`}
-                              </span>
-                            </div>
-                            <span className={getStatusClassName(participant.sessionMode)}>
-                              {sessionModeLabels[participant.sessionMode]}
-                            </span>
-                            {isSelectedRoomLeader &&
-                            participant.userId !== currentUserId ? (
-                              <button
-                                className={styles.textButton}
-                                disabled={kickParticipantMutation.isPending}
-                                onClick={() =>
-                                  kickParticipantMutation.mutate({
-                                    roomId: selectedRoom.roomId,
-                                    targetUserId: participant.userId,
-                                  })
-                                }
-                                type="button"
-                              >
-                                내보내기
-                              </button>
-                            ) : null}
-                          </li>
-                        );
-                      })}
-                    </ul>
-                  </aside>
                 </section>
 
                 <div className={styles.roomChatSlot}>
-                  <StudyRoomChatPanel
-                    roomId={selectedRoom.roomId}
-                    sessionMode={selectedParticipation.sessionMode}
-                    token={token}
-                  />
+                  <Suspense fallback={null}>
+                    <StudyRoomChatPanel
+                      roomId={selectedRoom.roomId}
+                      sessionMode={selectedParticipation.sessionMode}
+                      token={token}
+                    />
+                  </Suspense>
                 </div>
               </>
             ) : null}
@@ -1099,6 +1344,96 @@ export function StudyRoomPage() {
           )}
         </aside>
       </div>
+
+      {actionNotice ? (
+        <div className={styles.actionToast} role="status" aria-live="polite">
+          {actionNotice}
+        </div>
+      ) : null}
+
+      {memberModalOpen && selectedRoom && selectedParticipation ? (
+        <div className={styles.modalBackdrop}>
+          <section
+            className={`${styles.inviteModal} ${styles.memberModal}`}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="member-modal-title"
+          >
+            <div className={styles.modalHeader}>
+              <div>
+                <span className={styles.panelEyebrow}>Members</span>
+                <h2 id="member-modal-title">방 멤버</h2>
+              </div>
+              <button
+                className={styles.iconButton}
+                onClick={() => setMemberModalOpen(false)}
+                type="button"
+                aria-label="멤버 조회 모달 닫기"
+              >
+                ×
+              </button>
+            </div>
+
+            {actionError ? (
+              <p className={styles.error} role="alert">
+                {actionError}
+              </p>
+            ) : null}
+
+            <ul className={`${styles.participantList} ${styles.memberModalList}`}>
+              {selectedParticipants.map((participant) => (
+                  <li
+                    className={
+                      participant.userId === currentUserId
+                        ? styles.currentParticipantRow
+                        : undefined
+                    }
+                    key={participant.participantId}
+                  >
+                    <span
+                      className={`${styles.memberAvatar} ${
+                        styles[`member${participant.sessionMode}`]
+                      }`}
+                      aria-hidden="true"
+                    >
+                      {getInitial(participant.participantName)}
+                    </span>
+                    <div>
+                      <strong>{participant.participantName}</strong>
+                      <span>
+                        <ParticipantFocusStatus
+                          currentUserId={currentUserId}
+                          localFocusStartedAt={
+                            localFocusStartedAtByRoom[selectedRoom.roomId] ?? null
+                          }
+                          participant={participant}
+                        />
+                      </span>
+                    </div>
+                    <span className={getStatusClassName(participant.sessionMode)}>
+                      {sessionModeLabels[participant.sessionMode]}
+                    </span>
+                    {isSelectedRoomLeader && participant.userId !== currentUserId ? (
+                      <button
+                        className={styles.textButton}
+                        disabled={kickParticipantMutation.isPending}
+                        onClick={() =>
+                          kickParticipantMutation.mutate({
+                            roomId: selectedRoom.roomId,
+                            targetUserId: participant.userId,
+                          })
+                        }
+                        type="button"
+                      >
+                        내보내기
+                      </button>
+                    ) : null}
+                  </li>
+              ))}
+            </ul>
+          </section>
+        </div>
+      ) : null}
 
       {createModalOpen ? (
         <div className={styles.modalBackdrop}>
@@ -1245,7 +1580,7 @@ export function StudyRoomPage() {
         </div>
       ) : null}
 
-      {inviteModalOpen && createdRoom ? (
+      {inviteModalOpen && inviteModalRoom ? (
         <div className={styles.modalBackdrop}>
           <section
             className={styles.inviteModal}
@@ -1257,7 +1592,7 @@ export function StudyRoomPage() {
               <div>
                 <span className={styles.panelEyebrow}>Invite</span>
                 <h2 id="invite-modal-title">
-                  {createdRoom.visibility === "PRIVATE"
+                  {inviteModalRoom.visibility === "PRIVATE"
                     ? "초대 코드를 확인하세요"
                     : "방이 만들어졌어요"}
                 </h2>
@@ -1275,18 +1610,20 @@ export function StudyRoomPage() {
             <dl className={styles.inviteDetails}>
               <div>
                 <dt>방 이름</dt>
-                <dd>{createdRoom.name}</dd>
+                <dd>{inviteModalRoom.name}</dd>
               </div>
             </dl>
 
-            {createdRoom.inviteCode ? (
+            {inviteModalRoom.inviteCode ? (
               <div className={styles.inviteCodeBox}>
                 <span>초대 코드</span>
-                <strong>{createdRoom.inviteCode}</strong>
+                <strong>{inviteModalRoom.inviteCode}</strong>
               </div>
             ) : (
               <p className={styles.emptyText}>
-                공개방은 공개방 참여 화면에서 바로 찾을 수 있습니다.
+                {inviteModalRoom.visibility === "PRIVATE"
+                  ? "초대 코드를 조회하지 못했습니다. 새로 생성해 주세요."
+                  : "공개방은 공개방 참여 화면에서 바로 찾을 수 있습니다."}
               </p>
             )}
 
@@ -1298,11 +1635,25 @@ export function StudyRoomPage() {
               >
                 초대 정보 복사
               </button>
+              {inviteModalRoom.visibility === "PRIVATE" ? (
+                <button
+                  className={styles.secondaryButton}
+                  disabled={reissueInviteCodeMutation.isPending}
+                  onClick={() =>
+                    reissueInviteCodeMutation.mutate(inviteModalRoom.roomId)
+                  }
+                  type="button"
+                >
+                  {inviteModalRoom.inviteCode
+                    ? "초대 코드 재생성"
+                    : "초대 코드 생성"}
+                </button>
+              ) : null}
               <button
                 className={styles.primaryButton}
                 onClick={() => {
                   setInviteModalOpen(false);
-                  navigate(getRoomPath(createdRoom.roomId));
+                  navigate(getRoomPath(inviteModalRoom.roomId));
                 }}
                 type="button"
               >

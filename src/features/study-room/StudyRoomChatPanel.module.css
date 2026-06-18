@@ -300,14 +300,15 @@
 
 /* StudyRoom service chat panel. */
 .chatPanel {
-  grid-template-rows: auto auto auto minmax(120px, 1fr) auto;
+  box-sizing: border-box;
+  grid-template-rows: auto auto minmax(0, auto) minmax(150px, 1fr) auto;
   height: 100%;
   min-height: 0;
-  gap: 12px;
+  gap: 9px;
   overflow: hidden;
   border: 1px solid rgba(220, 231, 216, 0.92);
   border-radius: 8px;
-  padding: 18px;
+  padding: 14px;
   color: var(--color-ink);
   background: rgba(255, 255, 255, 0.92);
   box-shadow: 0 12px 28px rgba(31, 42, 33, 0.04);
@@ -315,7 +316,7 @@
 
 .chatHeader {
   align-items: start;
-  padding-bottom: 12px;
+  padding-bottom: 9px;
   border-bottom: 1px solid var(--color-hairline-soft);
 }
 
@@ -327,21 +328,23 @@
 
 .chatHeader h3 {
   color: var(--color-ink);
-  font-size: var(--font-size-title);
+  font-size: 1.18rem;
   font-weight: 500;
 }
 
 .chatHeader span {
   border: 1px solid rgba(63, 127, 159, 0.16);
+  padding: 5px 9px;
   color: #21516a;
   background: #e0f1f7;
+  font-size: 0.78rem;
 }
 
 .blockedNotice,
 .availableNotice {
   border-radius: 8px;
-  padding: 12px 14px;
-  font-size: var(--font-size-body-sm);
+  padding: 9px 11px;
+  font-size: 0.86rem;
   line-height: 1.45;
 }
 
@@ -355,20 +358,26 @@
   background: rgba(228, 244, 235, 0.86);
 }
 
+.feedbackStack {
+  display: grid;
+  min-height: 0;
+  gap: 8px;
+}
+
 .error {
   color: var(--color-error);
   background: var(--color-error-soft);
 }
 
 .messageList {
-  min-height: 120px;
+  min-height: 150px;
   max-height: none;
   align-content: start;
-  gap: 10px;
+  gap: 8px;
   overflow: auto;
   border: 1px solid var(--color-hairline-soft);
   border-radius: 8px;
-  padding: 12px;
+  padding: 10px;
   background: rgba(248, 251, 245, 0.62);
 }
 
@@ -383,32 +392,37 @@
   width: auto;
   border: 1px solid rgba(220, 231, 216, 0.78);
   border-radius: 8px;
-  padding: 10px 12px;
+  padding: 8px 10px;
   color: var(--color-body);
   background: rgba(255, 255, 255, 0.88);
 }
 
 .messageItem strong {
   color: var(--color-ink);
+  font-size: 0.88rem;
 }
 
 .messageItem time {
   color: var(--color-muted);
+  font-size: 0.78rem;
   opacity: 1;
 }
 
 .messageItem p {
   color: var(--color-body);
+  font-size: 0.88rem;
+  line-height: 1.45;
 }
 
 .chatForm {
-  gap: 10px;
+  gap: 8px;
+  min-height: 0;
   padding-top: 0;
 }
 
 .chatForm label {
   color: var(--color-body);
-  font-size: var(--font-size-body-sm);
+  font-size: 0.86rem;
 }
 
 .chatForm label > span {
@@ -417,7 +431,7 @@
 
 .chatForm textarea {
   height: auto;
-  min-height: 96px;
+  min-height: 62px;
   max-height: none;
   resize: none;
   border-color: var(--color-hairline);
@@ -425,7 +439,8 @@
   padding: 10px 12px;
   color: var(--color-ink);
   background: var(--color-surface-card);
-  font-size: var(--font-size-body-sm);
+  font-size: 0.86rem;
+  line-height: 1.45;
 }
 
 .chatForm textarea::placeholder {
@@ -448,11 +463,11 @@
 
 .formFooter button {
   min-width: 92px;
-  min-height: 40px;
+  min-height: 38px;
   border-radius: 8px;
   color: var(--color-on-primary);
   background: var(--color-primary);
-  font-size: var(--font-size-body-sm);
+  font-size: 0.86rem;
   pointer-events: auto;
 }
 

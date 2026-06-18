@@ -22,6 +22,7 @@ vi.mock("../features/study-room/StudyRoomChatPanel", () => ({
 }));
 
 type StudyRoomState = {
+  inviteCodes: Record<string, string>;
   myParticipations: MyParticipation[];
   publicRooms: StudyRoomSummary[];
   rooms: Record<string, StudyRoomDetail>;
@@ -67,6 +68,7 @@ function createRoom(
     name: "Morning focus",
     participants,
     roomId: "room-public",
+    visibility: "PUBLIC",
     ...override,
   };
 }
@@ -82,8 +84,12 @@ function setupStudyRoomHandlers({
     name: "Invite only",
     participants: [],
     roomId: "room-private",
+    visibility: "PRIVATE",
   });
   const state: StudyRoomState = {
+    inviteCodes: {
+      [privateRoom.roomId]: "SECRET",
+    },
     myParticipations: [
       {
         joinedAt: "2026-04-24T09:00:00",
@@ -167,7 +173,10 @@ function setupStudyRoomHandlers({
         visibility: RoomVisibility;
       };
       const roomId = "room-created";
-      const inviteCode = body.visibility === "PRIVATE" ? "INV123" : null;
+      const response =
+        body.visibility === "PRIVATE"
+          ? { inviteCode: "INV123", roomId }
+          : { roomId };
       const participant = createParticipant({
         participantId: "participant-created",
       });
@@ -178,7 +187,11 @@ function setupStudyRoomHandlers({
         name: body.name,
         participants: [participant],
         roomId,
+        visibility: body.visibility,
       };
+      if (body.visibility === "PRIVATE") {
+        state.inviteCodes[roomId] = "INV123";
+      }
       state.myParticipations = [
         ...state.myParticipations,
         {
@@ -200,7 +213,7 @@ function setupStudyRoomHandlers({
         ];
       }
 
-      return HttpResponse.json({ inviteCode, roomId });
+      return HttpResponse.json(response);
     }),
     http.get("http://localhost:8080/rooms/:roomId", ({ params }) => {
       const room = state.rooms[String(params.roomId)];
@@ -212,35 +225,77 @@ function setupStudyRoomHandlers({
       return HttpResponse.json(room);
     }),
     http.post("http://localhost:8080/rooms/join", async ({ request }) => {
-      const body = (await request.json()) as { inviteCode: string };
+      const body = (await request.json()) as {
+        inviteCode?: string;
+        roomId?: string;
+      };
 
-      if (body.inviteCode !== "SECRET") {
+      if (body.roomId) {
+        const room = state.rooms[body.roomId];
+        const inviteCode = state.inviteCodes[body.roomId];
+
+        if (!room) {
+          return HttpResponse.json(
+            { message: "Room not found" },
+            { status: 404 },
+          );
+        }
+
+        if (room.visibility === "PRIVATE" && body.inviteCode !== inviteCode) {
+          return HttpResponse.json(
+            { message: "Invalid invite code" },
+            { status: 400 },
+          );
+        }
+
+        addMyParticipation(body.roomId);
+        return new HttpResponse(null, { status: 200 });
+      }
+
+      const joinedRoomId = Object.entries(state.inviteCodes).find(
+        ([, inviteCode]) => inviteCode === body.inviteCode,
+      )?.[0];
+
+      if (!joinedRoomId) {
         return HttpResponse.json(
           { message: "Invalid invite code" },
           { status: 400 },
         );
       }
 
-      addMyParticipation("room-private");
+      addMyParticipation(joinedRoomId);
       return new HttpResponse(null, { status: 200 });
     }),
-    http.post("http://localhost:8080/rooms/:roomId/join", async ({
-      params,
-      request,
-    }) => {
+    http.get("http://localhost:8080/rooms/:roomId/invite-code", ({ params }) => {
       const roomId = String(params.roomId);
-      const body = (await request.json()) as { inviteCode: string | null };
+      const room = state.rooms[roomId];
 
-      if (roomId === "room-private" && body.inviteCode !== "SECRET") {
+      if (!room || room.visibility !== "PRIVATE") {
         return HttpResponse.json(
           { message: "Invalid invite code" },
           { status: 400 },
         );
       }
 
-      addMyParticipation(roomId);
-      return new HttpResponse(null, { status: 200 });
+      return HttpResponse.json({ inviteCode: state.inviteCodes[roomId] });
     }),
+    http.post(
+      "http://localhost:8080/rooms/:roomId/invite-code/reissue",
+      ({ params }) => {
+        const roomId = String(params.roomId);
+        const room = state.rooms[roomId];
+
+        if (!room || room.visibility !== "PRIVATE") {
+          return HttpResponse.json(
+            { message: "Invalid invite code" },
+            { status: 400 },
+          );
+        }
+
+        state.inviteCodes[roomId] = "NEWINV";
+        return HttpResponse.json({ inviteCode: "NEWINV" });
+      },
+    ),
     http.post("http://localhost:8080/rooms/:roomId/leave", ({ params }) => {
       const roomId = String(params.roomId);
       state.myParticipations = state.myParticipations.filter(
@@ -311,6 +366,7 @@ function setupStudyRoomHandlers({
 
 describe("StudyRoomPage", () => {
   it("renders public rooms and selected room participants", async () => {
+    const user = userEvent.setup();
     setupStudyRoomHandlers();
     authenticate("/study-room/rooms/room-public");
 
@@ -319,8 +375,13 @@ describe("StudyRoomPage", () => {
     expect(
       await screen.findAllByRole("heading", { name: "Morning focus" }),
     ).not.toHaveLength(0);
-    expect(await screen.findByText("Mina")).toBeInTheDocument();
-    expect(screen.getByText("Joon")).toBeInTheDocument();
+    expect(screen.queryByText("Joon")).toBeNull();
+
+    await user.click(screen.getByRole("button", { name: "멤버 조회하기" }));
+    const memberDialog = await screen.findByRole("dialog", { name: "방 멤버" });
+
+    expect(within(memberDialog).getByText("Mina")).toBeInTheDocument();
+    expect(within(memberDialog).getByText("Joon")).toBeInTheDocument();
   });
 
   it("creates a private room and shows its name and invite code", async () => {
@@ -346,6 +407,133 @@ describe("StudyRoomPage", () => {
     expect(
       await screen.findAllByRole("heading", { name: "Deep work" }),
     ).not.toHaveLength(0);
+
+    await user.click(screen.getByRole("button", { name: "초대 코드 조회/생성" }));
+    const inviteDialog = await screen.findByRole("dialog", {
+      name: "초대 코드를 확인하세요",
+    });
+    expect(within(inviteDialog).getByText("INV123")).toBeInTheDocument();
+    await user.click(
+      within(inviteDialog).getByRole("button", { name: "초대 코드 재생성" }),
+    );
+    expect(await within(inviteDialog).findByText("NEWINV")).toBeInTheDocument();
+  });
+
+  it("creates a public room without exposing invite code controls", async () => {
+    const user = userEvent.setup();
+    setupStudyRoomHandlers();
+    authenticate("/study-room/create");
+
+    render(<App />);
+
+    const createDialog = await screen.findByRole("dialog", {
+      name: "스터디룸 만들기",
+    });
+    await user.type(within(createDialog).getByLabelText("방 이름"), "Open focus");
+    await user.click(within(createDialog).getByRole("button", { name: "방 만들기" }));
+
+    await waitFor(() =>
+      expect(window.location.pathname).toBe("/study-room/rooms/room-created"),
+    );
+    expect(await screen.findAllByRole("heading", { name: "Open focus" })).not.toHaveLength(0);
+    expect(
+      screen.queryByRole("dialog", { name: "초대 코드를 확인하세요" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "초대 코드 조회/생성" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("shows private invite controls when room detail omits visibility", async () => {
+    const user = userEvent.setup();
+    const privateRoom = createRoom({
+      currentCount: 1,
+      leaderUserId: "user-me",
+      name: "Hidden invite room",
+      participants: [createParticipant()],
+      roomId: "room-private",
+      visibility: "PRIVATE",
+    });
+    setupStudyRoomHandlers({
+      initialState: {
+        inviteCodes: {
+          "room-private": "SECRET",
+        },
+        myParticipations: [
+          {
+            joinedAt: "2026-04-24T09:00:00",
+            participantId: "participant-me",
+            roomId: "room-private",
+            sessionMode: "WAITING",
+          },
+        ],
+        publicRooms: [],
+        rooms: {
+          "room-private": privateRoom,
+        },
+      },
+    });
+    server.use(
+      http.get("http://localhost:8080/rooms/:roomId", ({ params }) => {
+        if (params.roomId !== "room-private") {
+          return HttpResponse.json({ message: "Room not found" }, { status: 404 });
+        }
+
+        const roomWithoutVisibility: Partial<StudyRoomDetail> = { ...privateRoom };
+        delete roomWithoutVisibility.visibility;
+        return HttpResponse.json(roomWithoutVisibility);
+      }),
+    );
+    authenticate("/study-room/rooms/room-private");
+
+    render(<App />);
+
+    await user.click(
+      await screen.findByRole("button", { name: "초대 코드 조회/생성" }),
+    );
+
+    const inviteDialog = await screen.findByRole("dialog", {
+      name: "초대 코드를 확인하세요",
+    });
+    expect(within(inviteDialog).getByText("SECRET")).toBeInTheDocument();
+  });
+
+  it("hides private invite controls from non-leader members", async () => {
+    const privateRoom = createRoom({
+      currentCount: 1,
+      leaderUserId: "user-leader",
+      name: "Leader only invite",
+      participants: [createParticipant()],
+      roomId: "room-private",
+      visibility: "PRIVATE",
+    });
+    setupStudyRoomHandlers({
+      initialState: {
+        inviteCodes: {
+          "room-private": "SECRET",
+        },
+        myParticipations: [
+          {
+            joinedAt: "2026-04-24T09:00:00",
+            participantId: "participant-me",
+            roomId: "room-private",
+            sessionMode: "WAITING",
+          },
+        ],
+        publicRooms: [],
+        rooms: {
+          "room-private": privateRoom,
+        },
+      },
+    });
+    authenticate("/study-room/rooms/room-private");
+
+    render(<App />);
+
+    expect(await screen.findByRole("heading", { name: "대기 상태" })).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "초대 코드 조회/생성" }),
+    ).not.toBeInTheDocument();
   });
 
   it("shows the server error when private invite join fails", async () => {
@@ -395,6 +583,25 @@ describe("StudyRoomPage", () => {
     ).not.toHaveLength(0);
   });
 
+  it("dismisses success notices automatically", async () => {
+    const user = userEvent.setup();
+    setupStudyRoomHandlers();
+    authenticate("/study-room/rooms/room-public");
+
+    render(<App />);
+
+    await screen.findByRole("button", { name: "집중 시작하기" });
+    await user.click(screen.getByRole("button", { name: "집중 시작하기" }));
+
+    expect(await screen.findByRole("status")).toHaveTextContent(
+      "집중 상태로 전환했어요.",
+    );
+    await waitFor(
+      () => expect(screen.queryByRole("status")).not.toBeInTheDocument(),
+      { timeout: 4000 },
+    );
+  });
+
   it("switches participant state and leaves the room", async () => {
     const user = userEvent.setup();
     setupStudyRoomHandlers();
@@ -402,38 +609,85 @@ describe("StudyRoomPage", () => {
 
     render(<App />);
 
-    const minaRow = (await screen.findByText("Mina")).closest("li");
-    expect(minaRow).not.toBeNull();
-    expect(within(minaRow as HTMLElement).getByText("대기")).toBeInTheDocument();
-
-    await user.click(screen.getByRole("button", { name: "집중 시작하기" }));
+    await user.click(await screen.findByRole("button", { name: "집중 시작하기" }));
     expect(
       await screen.findByText("집중 상태로 전환했어요."),
     ).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: /^00:/ })).toBeInTheDocument();
+    expect(screen.queryByText("user-me")).toBeNull();
+    expect(screen.queryByText("user-joon")).toBeNull();
+
+    await user.click(screen.getByRole("button", { name: "멤버 조회하기" }));
+    let memberDialog = await screen.findByRole("dialog", { name: "방 멤버" });
+    let minaRow = within(memberDialog).getByText("Mina").closest("li");
+    expect(minaRow).not.toBeNull();
     await waitFor(() =>
       expect(within(minaRow as HTMLElement).getByText("집중")).toBeInTheDocument(),
     );
-    expect(await screen.findByRole("heading", { name: /^00:/ })).toBeInTheDocument();
     expect(within(minaRow as HTMLElement).getByText(/집중 00:/)).toBeInTheDocument();
-    expect(screen.queryByText("user-me")).toBeNull();
-    expect(screen.queryByText("user-joon")).toBeNull();
+    await user.click(
+      within(memberDialog).getByRole("button", {
+        name: "멤버 조회 모달 닫기",
+      }),
+    );
 
     await user.click(screen.getByRole("button", { name: "휴식 전환" }));
     expect(
       await screen.findByText("휴식 상태로 전환했어요."),
     ).toBeInTheDocument();
-    await waitFor(() =>
-      expect(within(minaRow as HTMLElement).getByText("휴식")).toBeInTheDocument(),
-    );
     expect(
       await screen.findByRole("heading", { name: "휴식 중" }),
     ).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "멤버 조회하기" }));
+    memberDialog = await screen.findByRole("dialog", { name: "방 멤버" });
+    minaRow = within(memberDialog).getByText("Mina").closest("li");
+    expect(minaRow).not.toBeNull();
+    await waitFor(() =>
+      expect(within(minaRow as HTMLElement).getByText("휴식")).toBeInTheDocument(),
+    );
+    await user.click(
+      within(memberDialog).getByRole("button", {
+        name: "멤버 조회 모달 닫기",
+      }),
+    );
 
     expect(screen.queryByRole("button", { name: "내보내기" })).toBeNull();
 
     await user.click(screen.getByRole("button", { name: "방 나가기" }));
     expect(await screen.findByText("스터디룸에서 나갔어요.")).toBeInTheDocument();
     expect(await screen.findByText("아직 입장할 스터디룸이 없습니다.")).toBeInTheDocument();
+  });
+
+  it("redirects home and removes my joined room when I am kicked", async () => {
+    setupStudyRoomHandlers({
+      initialState: {
+        rooms: {
+          "room-public": createRoom({
+            currentCount: 1,
+            participants: [
+              createParticipant({
+                participantId: "participant-joon",
+                participantName: "Joon",
+                userId: "user-joon",
+              }),
+            ],
+          }),
+        },
+      },
+    });
+    authenticate("/study-room/rooms/room-public");
+
+    render(<App />);
+
+    await waitFor(() => expect(window.location.pathname).toBe("/study-room"));
+    expect(await screen.findByRole("status")).toHaveTextContent(
+      "방에서 내보내졌어요.",
+    );
+    expect(
+      await screen.findByText("아직 입장할 스터디룸이 없습니다."),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Morning focus")).not.toBeInTheDocument();
   });
 
   it("shows kick actions only to the leader and displays server errors", async () => {
@@ -449,8 +703,10 @@ describe("StudyRoomPage", () => {
 
     render(<App />);
 
-    const minaRow = (await screen.findByText("Mina")).closest("li");
-    const joonRow = screen.getByText("Joon").closest("li");
+    await user.click(await screen.findByRole("button", { name: "멤버 조회하기" }));
+    const memberDialog = await screen.findByRole("dialog", { name: "방 멤버" });
+    const minaRow = within(memberDialog).getByText("Mina").closest("li");
+    const joonRow = within(memberDialog).getByText("Joon").closest("li");
     expect(minaRow).not.toBeNull();
     expect(joonRow).not.toBeNull();
     expect(

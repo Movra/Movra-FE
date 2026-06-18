@@ -931,6 +931,22 @@
   background: var(--color-success-soft);
 }
 
+.actionToast {
+  position: fixed;
+  top: 24px;
+  right: 28px;
+  z-index: 70;
+  max-width: min(420px, calc(100vw - 56px));
+  padding: 13px 16px;
+  border: 1px solid rgba(47, 158, 91, 0.18);
+  border-radius: 8px;
+  color: var(--color-success);
+  background: rgba(228, 244, 235, 0.96);
+  box-shadow: 0 16px 40px rgba(31, 42, 33, 0.14);
+  font-size: var(--font-size-body-sm);
+  line-height: 1.45;
+}
+
 .centerState {
   display: grid;
   min-height: min(560px, calc(100vh - 72px));
@@ -2363,11 +2379,11 @@
 /* StudyRoom detail wireframe: keep the app shell, use the reference only for structure. */
 .roomContentShell {
   box-sizing: border-box;
-  width: min(100%, 1480px);
+  width: min(100%, 1560px);
   height: 100vh;
   height: 100dvh;
   overflow: hidden;
-  padding: 28px;
+  padding: 16px 24px 20px;
 }
 
 .roomContentShell .joinedRoomsRail {
@@ -2375,7 +2391,24 @@
 }
 
 .roomContentShell .pageHeader {
-  margin-bottom: 16px;
+  --page-header-eyebrow-size: 0.76rem;
+  --page-header-title-size: 1.74rem;
+  --page-header-description-size: 0.86rem;
+
+  align-items: flex-start;
+  margin-bottom: 12px;
+}
+
+.roomContentShell .quickNav {
+  justify-content: flex-end;
+  gap: 8px;
+  margin-bottom: 0;
+}
+
+.roomContentShell .quickNavLink {
+  min-height: 36px;
+  padding: 0 13px;
+  font-size: 0.86rem;
 }
 
 .roomContentShell .studyMain {
@@ -2391,10 +2424,9 @@
   min-height: 0;
   overflow: hidden;
   grid-template-areas:
-    "focus chat"
-    "focus members";
-  grid-template-columns: minmax(440px, 1fr) minmax(340px, 420px);
-  grid-template-rows: minmax(280px, 1fr) minmax(150px, 180px);
+    "focus chat";
+  grid-template-columns: minmax(500px, 1fr) minmax(440px, 520px);
+  grid-template-rows: minmax(0, 1fr);
   gap: 16px;
   align-items: stretch;
 }
@@ -2549,6 +2581,35 @@
   min-height: 32px;
 }
 
+.memberModal {
+  width: min(100%, 620px);
+  max-height: min(760px, calc(100dvh - 44px));
+  overflow: hidden;
+}
+
+.memberModalList {
+  max-height: min(540px, calc(100dvh - 190px));
+  overflow: auto;
+}
+
+.memberModalList li {
+  grid-template-columns: 38px minmax(0, 1fr) auto auto;
+  gap: 10px;
+  padding: 11px 12px;
+  border: 1px solid var(--color-hairline-soft);
+  border-radius: 8px;
+  background: rgba(248, 251, 245, 0.62);
+}
+
+.memberModalList li:last-child {
+  border-bottom: 1px solid var(--color-hairline-soft);
+}
+
+.memberModalList .currentParticipantRow {
+  border-color: rgba(47, 158, 91, 0.35);
+  background: var(--color-primary-pale);
+}
+
 .roomActionButton {
   display: inline-flex;
   width: auto;
@@ -2602,6 +2663,12 @@
   background: #fbdde3;
 }
 
+.roomMemberButton {
+  height: 44px;
+  padding: 0 16px;
+  font-size: var(--font-size-body-sm);
+}
+
 @media (max-width: 1180px) {
   .roomContentShell {
     height: auto;
@@ -2620,8 +2687,7 @@
     overflow: visible;
     grid-template-areas:
       "focus"
-      "chat"
-      "members";
+      "chat";
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows: auto;
   }
@@ -2661,6 +2727,15 @@
   }
 
   .roomMemberPanel .participantList li > .textButton {
+    grid-column: 2 / -1;
+    justify-self: start;
+  }
+
+  .memberModalList li {
+    grid-template-columns: 38px minmax(0, 1fr) auto;
+  }
+
+  .memberModalList li > .textButton {
     grid-column: 2 / -1;
     justify-self: start;
   }

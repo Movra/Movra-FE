@@ -4,11 +4,13 @@ import type {
   MyParticipation,
   RoomVisibility,
   StudyRoomDetail,
+  StudyRoomInviteCodeResponse,
   StudyRoomParticipant,
   StudyRoomSummary,
 } from "./types";
 
 type AuthenticatedRequest = {
+  signal?: AbortSignal;
   token: string;
 };
 
@@ -33,24 +35,30 @@ export type KickStudyRoomParticipantRequest = StudyRoomRequest & {
   targetUserId: string;
 };
 
-export function createStudyRoom({
+export async function createStudyRoom({
   name,
   token,
   visibility,
 }: CreateStudyRoomRequest) {
-  return apiRequest<CreateStudyRoomResponse>("/rooms", {
+  const response = await apiRequest<CreateStudyRoomResponse>("/rooms", {
     body: { name, visibility },
     method: "POST",
     token,
   });
+
+  if (visibility === "PUBLIC") {
+    return { roomId: response.roomId };
+  }
+
+  return response;
 }
 
-export function getPublicStudyRooms({ token }: AuthenticatedRequest) {
-  return apiRequest<StudyRoomSummary[]>("/rooms", { token });
+export function getPublicStudyRooms({ signal, token }: AuthenticatedRequest) {
+  return apiRequest<StudyRoomSummary[]>("/rooms", { signal, token });
 }
 
-export function getStudyRoom({ roomId, token }: StudyRoomRequest) {
-  return apiRequest<StudyRoomDetail>(`/rooms/${roomId}`, { token });
+export function getStudyRoom({ roomId, signal, token }: StudyRoomRequest) {
+  return apiRequest<StudyRoomDetail>(`/rooms/${roomId}`, { signal, token });
 }
 
 export function joinStudyRoom({
@@ -58,8 +66,8 @@ export function joinStudyRoom({
   roomId,
   token,
 }: JoinStudyRoomRequest) {
-  return apiRequest<void>(`/rooms/${roomId}/join`, {
-    body: { inviteCode },
+  return apiRequest<void>("/rooms/join", {
+    body: inviteCode ? { inviteCode, roomId } : { roomId },
     method: "POST",
     token,
   });
@@ -83,6 +91,23 @@ export function leaveStudyRoom({ roomId, token }: StudyRoomRequest) {
   });
 }
 
+export function getStudyRoomInviteCode({ roomId, signal, token }: StudyRoomRequest) {
+  return apiRequest<StudyRoomInviteCodeResponse>(
+    `/rooms/${roomId}/invite-code`,
+    { signal, token },
+  );
+}
+
+export function reissueStudyRoomInviteCode({ roomId, token }: StudyRoomRequest) {
+  return apiRequest<StudyRoomInviteCodeResponse>(
+    `/rooms/${roomId}/invite-code/reissue`,
+    {
+      method: "POST",
+      token,
+    },
+  );
+}
+
 export function kickStudyRoomParticipant({
   roomId,
   targetUserId,
@@ -94,8 +119,13 @@ export function kickStudyRoomParticipant({
   });
 }
 
-export function getStudyRoomParticipants({ roomId, token }: StudyRoomRequest) {
+export function getStudyRoomParticipants({
+  roomId,
+  signal,
+  token,
+}: StudyRoomRequest) {
   return apiRequest<StudyRoomParticipant[]>(`/rooms/${roomId}/participants`, {
+    signal,
     token,
   });
 }
@@ -114,6 +144,6 @@ export function switchStudyRoomBreak({ roomId, token }: StudyRoomRequest) {
   });
 }
 
-export function getMyParticipations({ token }: AuthenticatedRequest) {
-  return apiRequest<MyParticipation[]>("/my-participations", { token });
+export function getMyParticipations({ signal, token }: AuthenticatedRequest) {
+  return apiRequest<MyParticipation[]>("/my-participations", { signal, token });
 }

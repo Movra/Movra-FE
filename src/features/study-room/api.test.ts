@@ -1,5 +1,6 @@
 import {
   createStudyRoom,
+  getStudyRoomInviteCode,
   getMyParticipations,
   getPublicStudyRooms,
   getStudyRoom,
@@ -8,6 +9,7 @@ import {
   joinStudyRoomByInvite,
   kickStudyRoomParticipant,
   leaveStudyRoom,
+  reissueStudyRoomInviteCode,
   startStudyRoomFocus,
   switchStudyRoomBreak,
 } from "./api";
@@ -33,6 +35,7 @@ describe("study room api", () => {
         },
       ],
       roomId: "room-1",
+      visibility: "PRIVATE",
     };
     const fetchMock = vi
       .fn()
@@ -153,9 +156,9 @@ describe("study room api", () => {
     );
     expect(fetchMock).toHaveBeenNthCalledWith(
       4,
-      "http://localhost:8080/rooms/room-1/join",
+      "http://localhost:8080/rooms/join",
       expect.objectContaining({
-        body: JSON.stringify({ inviteCode: "ABCD12" }),
+        body: JSON.stringify({ inviteCode: "ABCD12", roomId: "room-1" }),
         method: "POST",
       }),
     );
@@ -197,16 +200,45 @@ describe("study room api", () => {
     });
   });
 
-  it("sends null inviteCode when joining a public room", async () => {
+  it("creates public rooms without invite code payloads", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({ inviteCode: "PUBLIC-SHOULD-NOT-RETURN", roomId: "room-public" }),
+        {
+        headers: { "content-type": "application/json" },
+        status: 200,
+        },
+      ),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(
+      createStudyRoom({
+        name: "Open focus",
+        token: "access-token",
+        visibility: "PUBLIC",
+      }),
+    ).resolves.toEqual({ roomId: "room-public" });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "http://localhost:8080/rooms",
+      expect.objectContaining({
+        body: JSON.stringify({ name: "Open focus", visibility: "PUBLIC" }),
+        method: "POST",
+      }),
+    );
+  });
+
+  it("sends only roomId when joining a public room", async () => {
     const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 200 }));
     vi.stubGlobal("fetch", fetchMock);
 
     await joinStudyRoom({ roomId: "room-public", token: "access-token" });
 
     expect(fetchMock).toHaveBeenCalledWith(
-      "http://localhost:8080/rooms/room-public/join",
+      "http://localhost:8080/rooms/join",
       expect.objectContaining({
-        body: JSON.stringify({ inviteCode: null }),
+        body: JSON.stringify({ roomId: "room-public" }),
         method: "POST",
       }),
     );
@@ -227,6 +259,48 @@ describe("study room api", () => {
         body: JSON.stringify({ inviteCode: "INV123" }),
         method: "POST",
       }),
+    );
+  });
+
+  it("queries and reissues a private room invite code", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ inviteCode: "INV123" }), {
+          headers: { "content-type": "application/json" },
+          status: 200,
+        }),
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ inviteCode: "NEW456" }), {
+          headers: { "content-type": "application/json" },
+          status: 200,
+        }),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(
+      getStudyRoomInviteCode({
+        roomId: "room-private",
+        token: "access-token",
+      }),
+    ).resolves.toEqual({ inviteCode: "INV123" });
+    await expect(
+      reissueStudyRoomInviteCode({
+        roomId: "room-private",
+        token: "access-token",
+      }),
+    ).resolves.toEqual({ inviteCode: "NEW456" });
+
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      1,
+      "http://localhost:8080/rooms/room-private/invite-code",
+      expect.objectContaining({ method: "GET" }),
+    );
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      2,
+      "http://localhost:8080/rooms/room-private/invite-code/reissue",
+      expect.objectContaining({ method: "POST" }),
     );
   });
 });
