@@ -40,6 +40,7 @@
   align-items: center;
   gap: var(--space-xs);
   color: var(--color-ink);
+  font-family: var(--font-family-display);
   font-size: 1.125rem;
   font-weight: 700;
   text-decoration: none;
@@ -97,6 +98,10 @@
 }
 
 .authMain {
+  min-height: 100vh;
+}
+
+.routeFallback {
   min-height: 100vh;
 }
 

@@ -6,20 +6,28 @@ import { server } from "../test/server";
 import { App } from "./App";
 
 describe("App foundation", () => {
-  it("redirects unauthenticated users to login", () => {
+  it("redirects unauthenticated users to login", async () => {
     window.history.pushState({}, "", "/");
 
     render(<App />);
 
     expect(
-      screen.getByRole("heading", { name: "로그인" }),
+      await screen.findByRole("heading", { name: "로그인" }, { timeout: 5000 }),
     ).toBeInTheDocument();
   });
 
   it("renders the protected home shell when tokens are stored", async () => {
+    const home = createHomeTodayFixture();
+
     server.use(
       http.get("http://localhost:8080/home/today", () =>
-        HttpResponse.json(createHomeTodayFixture()),
+        HttpResponse.json(home),
+      ),
+      http.get("http://localhost:8080/behavior-profiles/me", () =>
+        HttpResponse.json(home.behaviorProfile),
+      ),
+      http.get("http://localhost:8080/focus-sessions/today", () =>
+        HttpResponse.json(home.focusSessions),
       ),
     );
     window.localStorage.setItem("movra.accessToken", "access-token");
@@ -30,8 +38,8 @@ describe("App foundation", () => {
 
     expect(
       await screen.findByRole("heading", {
-        name: "안녕하세요, 김모브라님!",
-      }),
+        name: "오늘은 TopPick 하나만 끝내요",
+      }, { timeout: 5000 }),
     ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "로그아웃" })).toBeInTheDocument();
   });
