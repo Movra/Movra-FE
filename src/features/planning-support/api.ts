@@ -8,6 +8,7 @@ import type {
 } from "../core-loop/types";
 
 type AuthenticatedRequest = {
+  signal?: AbortSignal;
   token: string;
 };
 
@@ -35,8 +36,8 @@ function appendFutureVisionForm(form: FormData, values: FutureVisionForm) {
   form.append("yearlyVisionDescription", values.yearlyVisionDescription);
 }
 
-export function getFutureVision({ token }: AuthenticatedRequest) {
-  return apiRequest<FutureVision>("/future-vision", { token });
+export function getFutureVision({ signal, token }: AuthenticatedRequest) {
+  return apiRequest<FutureVision>("/future-vision", { signal, token });
 }
 
 export function createFutureVision({
@@ -88,9 +89,11 @@ export function updateYearlyFutureVision({
 
 export function getTimetable({
   dailyPlanId,
+  signal,
   token,
 }: AuthenticatedRequest & { dailyPlanId: string }) {
   return apiRequest<Timetable>(`/timetables?dailyPlanId=${dailyPlanId}`, {
+    signal,
     token,
   });
 }
@@ -182,33 +185,37 @@ export function deleteSlot({
   });
 }
 
-export function getExamSchedules({ token }: AuthenticatedRequest) {
-  return apiRequest<ExamSchedule[]>("/exam-schedules", { token });
+export function getExamSchedules({ signal, token }: AuthenticatedRequest) {
+  return apiRequest<ExamSchedule[]>("/exam-schedules", { signal, token });
 }
 
 export function getExamSchedule({
   examScheduleId,
+  signal,
   token,
 }: AuthenticatedRequest & { examScheduleId: string }) {
   return apiRequest<ExamSchedule>(`/exam-schedules/${examScheduleId}`, {
+    signal,
     token,
   });
 }
 
-export function getNextExamSchedule({ token }: AuthenticatedRequest) {
-  return apiRequest<ExamSchedule>("/exam-schedules/next", { token }).catch(
-    (error) => {
-      if (error instanceof ApiClientError && error.status === 404) {
-        return null;
-      }
+export function getNextExamSchedule({ signal, token }: AuthenticatedRequest) {
+  return apiRequest<ExamSchedule>("/exam-schedules/next", {
+    signal,
+    token,
+  }).catch((error) => {
+    if (error instanceof ApiClientError && error.status === 404) {
+      return null;
+    }
 
-      throw error;
-    },
-  );
+    throw error;
+  });
 }
 
-export function getSeasonMode({ token }: AuthenticatedRequest) {
+export function getSeasonMode({ signal, token }: AuthenticatedRequest) {
   return apiRequest<SeasonModeResponse>("/exam-schedules/season-mode", {
+    signal,
     token,
   });
 }

@@ -2,8 +2,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type FormEvent, useEffect, useMemo, useState } from "react";
 import { Navigate, NavLink } from "react-router-dom";
 
-import characterDefault from "../assets/auth/character-default.png";
-import characterMindSweep from "../assets/auth/character-mindsweep.png";
+import characterDefault from "../assets/auth/character-default.webp";
+import characterMindSweep from "../assets/auth/character-mindsweep.webp";
 import { recordAnalyticsEventSafely } from "../features/analytics/api";
 import { AppSidebar } from "../features/core-loop/AppSidebar";
 import { useAuth } from "../features/auth/useAuth";
@@ -12,29 +12,39 @@ import {
   createMindSweep,
   deleteMindSweep,
   getHomeToday,
+  getTodayDailyPlan,
   selectTopPick,
   uncompleteMindSweep,
   unselectTopPick,
   updateMindSweep,
 } from "../features/core-loop/api";
+import { getBehaviorProfile } from "../features/onboarding/api";
 import {
   getFriendAccountabilityText,
   getNextExamLabel,
 } from "../features/core-loop/displayUtils";
 import { formatTopPickLimit, getTopPickLimit } from "../features/core-loop/topPickPolicy";
-import type { DailyPlanTask, HomeToday, TopPick } from "../features/core-loop/types";
+import type {
+  DailyPlan,
+  DailyPlanTask,
+  HomeToday,
+  TopPick,
+} from "../features/core-loop/types";
 import { getErrorMessage } from "../shared/api/errors";
 import { queryKeys } from "../shared/queryKeys";
 import { PageHeader } from "../shared/ui/PageHeader";
 import styles from "./PlanningPage.module.css";
 
 const homeTodayKey = queryKeys.homeToday();
+const behaviorProfileKey = queryKeys.behaviorProfileMe();
+const dailyPlanTodayKey = ["daily-plans", "today"] as const;
 const estimatedMinuteOptions = [30, 60, 80, 90, 120] as const;
 const toastVisibleMs = 1000;
 const toastFadeMs = 240;
 
 type FlowStep = "mindSweep" | "topPick";
 type CreateMindSweepContext = {
+  previousDailyPlan?: DailyPlan | null;
   previousHome?: HomeToday;
 };
 type PlanningIconType =
@@ -273,12 +283,23 @@ export function PlanningPage() {
 
   const homeQuery = useQuery({
     enabled: Boolean(token),
-    queryFn: () => getHomeToday({ token }),
+    queryFn: ({ signal }) => getHomeToday({ signal, token }),
     queryKey: homeTodayKey,
+  });
+  const dailyPlanQuery = useQuery({
+    enabled: Boolean(token),
+    queryFn: ({ signal }) => getTodayDailyPlan({ signal, token }),
+    queryKey: dailyPlanTodayKey,
+  });
+  const behaviorProfileQuery = useQuery({
+    enabled: Boolean(token),
+    queryFn: ({ signal }) => getBehaviorProfile({ signal, token }),
+    queryKey: behaviorProfileKey,
+    retry: false,
   });
 
   const home = homeQuery.data;
-  const dailyPlan = home?.todayDailyPlan ?? null;
+  const dailyPlan = dailyPlanQuery.data ?? home?.todayDailyPlan ?? null;
   const dailyPlanId = dailyPlan?.dailyPlanId ?? "";
   const tasks = useMemo(() => dailyPlan?.tasks ?? [], [dailyPlan?.tasks]);
   const orderedTasks = useMemo(() => {
@@ -293,7 +314,10 @@ export function PlanningPage() {
     );
   }, [taskContentOrder, tasks]);
   const topPicks = home?.topPicks ?? [];
-  const topPickLimit = getTopPickLimit(home?.behaviorProfile?.executionDifficulty);
+  const topPickLimit = getTopPickLimit(
+    behaviorProfileQuery.data?.executionDifficulty ??
+      home?.behaviorProfile?.executionDifficulty,
+  );
   const selectedTask =
     orderedTasks.find((task) => task.taskId === selectedTaskId) ??
     orderedTasks[0] ??
@@ -374,7 +398,10 @@ export function PlanningPage() {
   }, [actionError, actionNotice]);
 
   async function refreshHome() {
-    await queryClient.invalidateQueries({ queryKey: homeTodayKey });
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: homeTodayKey }),
+      queryClient.invalidateQueries({ queryKey: dailyPlanTodayKey }),
+    ]);
   }
 
   function handleMutationError(error: unknown) {
@@ -397,9 +424,14 @@ export function PlanningPage() {
   >({
     mutationFn: (content: string) => createMindSweep({ content, dailyPlanId, token }),
     onMutate: async (content) => {
-      await queryClient.cancelQueries({ queryKey: homeTodayKey });
+      await Promise.all([
+        queryClient.cancelQueries({ queryKey: homeTodayKey }),
+        queryClient.cancelQueries({ queryKey: dailyPlanTodayKey }),
+      ]);
 
       const previousHome = queryClient.getQueryData<HomeToday>(homeTodayKey);
+      const previousDailyPlan =
+        queryClient.getQueryData<typeof dailyPlan>(dailyPlanTodayKey);
       const optimisticTask: DailyPlanTask = {
         completed: false,
         content,
@@ -417,17 +449,26 @@ export function PlanningPage() {
           },
         });
       }
+      if (previousDailyPlan) {
+        queryClient.setQueryData(dailyPlanTodayKey, {
+          ...previousDailyPlan,
+          tasks: [...previousDailyPlan.tasks, optimisticTask],
+        });
+      }
 
       setTaskContentOrder((currentOrder) =>
         currentOrder.includes(content) ? currentOrder : [...currentOrder, content],
       );
       setMindSweepInput("");
 
-      return { previousHome };
+      return { previousHome, previousDailyPlan };
     },
     onError: (error, _content, context) => {
       if (context?.previousHome) {
         queryClient.setQueryData(homeTodayKey, context.previousHome);
+      }
+      if (context?.previousDailyPlan) {
+        queryClient.setQueryData(dailyPlanTodayKey, context.previousDailyPlan);
       }
 
       handleMutationError(error);
@@ -505,7 +546,7 @@ export function PlanningPage() {
     },
   });
 
-  if (homeQuery.isLoading) {
+  if (homeQuery.isLoading || dailyPlanQuery.isLoading) {
     return (
       <section className={styles.centerState} aria-live="polite">
         <img src={characterMindSweep} alt="" aria-hidden="true" />
@@ -514,13 +555,19 @@ export function PlanningPage() {
     );
   }
 
-  if (homeQuery.isError) {
+  if (homeQuery.isError || dailyPlanQuery.isError) {
     return (
       <section className={styles.centerState} aria-live="assertive">
         <img src={characterDefault} alt="" aria-hidden="true" />
         <h1>계획을 불러오지 못했습니다.</h1>
-        <p>{getErrorMessage(homeQuery.error)}</p>
-        <button onClick={() => homeQuery.refetch()} type="button">
+        <p>{getErrorMessage(homeQuery.error ?? dailyPlanQuery.error)}</p>
+        <button
+          onClick={() => {
+            homeQuery.refetch();
+            dailyPlanQuery.refetch();
+          }}
+          type="button"
+        >
           다시 시도
         </button>
       </section>
@@ -531,7 +578,11 @@ export function PlanningPage() {
     return null;
   }
 
-  if (home.behaviorProfile === null) {
+  if (
+    home.behaviorProfile === null ||
+    behaviorProfileQuery.data === null ||
+    behaviorProfileQuery.isError
+  ) {
     return <Navigate to="/onboarding" replace />;
   }
 

@@ -48,6 +48,12 @@ function setupPlanningHandlers(initialHome: HomeToday) {
 
   server.use(
     http.get("http://localhost:8080/home/today", () => HttpResponse.json(home)),
+    http.get("http://localhost:8080/daily-plans/today", () =>
+      HttpResponse.json(home.todayDailyPlan),
+    ),
+    http.get("http://localhost:8080/behavior-profiles/me", () =>
+      HttpResponse.json(home.behaviorProfile),
+    ),
     http.post(
       "http://localhost:8080/daily-plans/:dailyPlanId/mind-sweeps",
       async ({ request }) => {
