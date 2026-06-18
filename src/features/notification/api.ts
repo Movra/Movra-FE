@@ -8,11 +8,13 @@ import type {
 } from "./types";
 
 type AuthenticatedRequest = {
+  signal?: AbortSignal;
   token: string;
 };
 
-export function getNotificationPreference({ token }: AuthenticatedRequest) {
+export function getNotificationPreference({ signal, token }: AuthenticatedRequest) {
   return apiRequest<NotificationPreference>("/notification/preferences", {
+    signal,
     token,
   });
 }

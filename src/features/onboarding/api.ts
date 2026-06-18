@@ -6,11 +6,12 @@ import type {
 } from "./types";
 
 type AuthenticatedRequest = {
+  signal?: AbortSignal;
   token: string;
 };
 
-export function getOnboardingContext() {
-  return apiRequest<OnboardingContext>("/auth/onboarding-context");
+export function getOnboardingContext(signal?: AbortSignal) {
+  return apiRequest<OnboardingContext>("/auth/onboarding-context", { signal });
 }
 
 export function createBehaviorProfile({
@@ -24,8 +25,8 @@ export function createBehaviorProfile({
   });
 }
 
-export function getBehaviorProfile({ token }: AuthenticatedRequest) {
-  return apiRequest<BehaviorProfile>("/behavior-profiles/me", { token });
+export function getBehaviorProfile({ signal, token }: AuthenticatedRequest) {
+  return apiRequest<BehaviorProfile>("/behavior-profiles/me", { signal, token });
 }
 
 export function updateBehaviorProfile({

@@ -1,6 +1,7 @@
 import { apiRequest } from "../../shared/api/client";
 
 type AuthenticatedRequest = {
+  signal?: AbortSignal;
   token: string;
 };
 
@@ -69,6 +70,7 @@ export async function recordAnalyticsEventSafely(
 export function getAnalyticsEvents({
   eventType,
   from,
+  signal,
   to,
   token,
 }: GetAnalyticsEventsRequest) {
@@ -87,6 +89,6 @@ export function getAnalyticsEvents({
 
   return apiRequest<AnalyticsEventResponse[]>(
     query ? `/analytics/events?${query}` : "/analytics/events",
-    { token },
+    { signal, token },
   );
 }

@@ -1,6 +1,7 @@
 import { ApiClientError, apiRequest } from "../../shared/api/client";
 
 type AuthenticatedRequest = {
+  signal?: AbortSignal;
   token: string;
 };
 
@@ -33,12 +34,13 @@ export function createDailyReflection({
 }
 
 export function getDailyReflection({
+  signal,
   targetDate,
   token,
 }: AuthenticatedRequest & { targetDate: string }) {
   return apiRequest<DailyReflection>(
     `/daily-reflections?targetDate=${encodeURIComponent(targetDate)}`,
-    { token },
+    { signal, token },
   ).catch((error) => {
     if (error instanceof ApiClientError && error.status === 404) {
       return null;
@@ -97,17 +99,18 @@ export function createTinyWin({
   });
 }
 
-export function getTinyWins({ token }: AuthenticatedRequest) {
-  return apiRequest<TinyWin[]>("/tiny-wins", { token });
+export function getTinyWins({ signal, token }: AuthenticatedRequest) {
+  return apiRequest<TinyWin[]>("/tiny-wins", { signal, token });
 }
 
 export function getTinyWin({
+  signal,
   tinyWinId,
   token,
 }: AuthenticatedRequest & { tinyWinId: string }) {
   return apiRequest<TinyWin>(
     `/tiny-wins/${encodeURIComponent(tinyWinId)}`,
-    { token },
+    { signal, token },
   );
 }
 
