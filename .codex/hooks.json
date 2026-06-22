@@ -1,0 +1,51 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|resume|clear|compact",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node C:/Users/user/Desktop/hyohyeon-harness/dist/hooks/session-start.js",
+            "statusMessage": "Loading intent context"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write|apply_patch",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node C:/Users/user/Desktop/hyohyeon-harness/dist/hooks/pre-write-guard.js",
+            "statusMessage": "Checking intent gate"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node C:/Users/user/Desktop/hyohyeon-harness/dist/hooks/stop-continue.js",
+            "statusMessage": "Checking intent completion"
+          }
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "matcher": "manual|auto",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node C:/Users/user/Desktop/hyohyeon-harness/dist/hooks/pre-compact.js",
+            "statusMessage": "Writing intent handoff"
+          }
+        ]
+      }
+    ]
+  }
+}
