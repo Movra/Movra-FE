@@ -92,10 +92,13 @@ export function getTimetable({
   signal,
   token,
 }: AuthenticatedRequest & { dailyPlanId: string }) {
-  return apiRequest<Timetable>(`/timetables?dailyPlanId=${dailyPlanId}`, {
-    signal,
-    token,
-  });
+  return apiRequest<Timetable>(
+    `/timetables?dailyPlanId=${encodeURIComponent(dailyPlanId)}`,
+    {
+      signal,
+      token,
+    },
+  );
 }
 
 export function assignTopPickSlot({

@@ -127,11 +127,14 @@ export function createMorningTask({
   targetDate,
   token,
 }: AuthenticatedRequest & { content: string; targetDate: string }) {
-  return apiRequest<void>(`/morning-tasks?targetDate=${targetDate}`, {
-    body: { content },
-    method: "POST",
-    token,
-  });
+  return apiRequest<void>(
+    `/morning-tasks?targetDate=${encodeURIComponent(targetDate)}`,
+    {
+      body: { content },
+      method: "POST",
+      token,
+    },
+  );
 }
 
 export function updateMorningTask({

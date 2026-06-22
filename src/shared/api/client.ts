@@ -8,6 +8,7 @@ type ApiAuthConfig = {
 
 let apiAuthConfig: ApiAuthConfig | null = null;
 let refreshAccessTokenPromise: Promise<string | null> | null = null;
+let sessionExpiredNotified = false;
 const defaultErrorMessage = "요청 처리에 실패했습니다.";
 const invalidJsonMessage = "응답을 해석하지 못했습니다.";
 const networkErrorMessage = "네트워크 연결을 확인해 주세요.";
@@ -26,6 +27,19 @@ export class ApiClientError extends Error {
 
 export function configureApiAuth(config: ApiAuthConfig | null) {
   apiAuthConfig = config;
+  sessionExpiredNotified = false;
+}
+
+// Concurrent expired requests can each reach the expiry branch. Latch the
+// notification so onSessionExpired fires once; a later successful response
+// (e.g. after re-login) clears the latch.
+function notifySessionExpired() {
+  if (sessionExpiredNotified) {
+    return;
+  }
+
+  sessionExpiredNotified = true;
+  apiAuthConfig?.onSessionExpired();
 }
 
 function createUrl(path: string) {
@@ -41,18 +55,27 @@ function isFormData(body: unknown): body is FormData {
   return typeof FormData !== "undefined" && body instanceof FormData;
 }
 
-async function readJson<T>(response: Response): Promise<T | undefined> {
+async function readJson<T>(
+  response: Response,
+  strict = false,
+): Promise<T | undefined> {
   if (response.status === 204) {
-    return undefined;
-  }
-
-  const contentType = response.headers.get("content-type") ?? "";
-  if (!contentType.includes("application/json")) {
     return undefined;
   }
 
   const rawBody = await response.text();
   if (!rawBody.trim()) {
+    return undefined;
+  }
+
+  const contentType = response.headers.get("content-type") ?? "";
+  if (!contentType.includes("application/json")) {
+    // A non-empty, non-JSON body on a success response (e.g. an HTML error
+    // page served with a 2xx status) would otherwise be cast to T as
+    // undefined and surface later as a downstream crash. Surface it here.
+    if (strict) {
+      throw new ApiClientError(response.status, invalidJsonMessage);
+    }
     return undefined;
   }
 
@@ -149,21 +172,23 @@ export async function apiRequest<T>(
         const retryResponse = await request(path, options, nextAccessToken);
 
         if (retryResponse.ok) {
-          return (await readJson<T>(retryResponse)) as T;
+          sessionExpiredNotified = false;
+          return (await readJson<T>(retryResponse, true)) as T;
         }
 
         const retryError = await createApiError(retryResponse);
         if (retryError.status === 401) {
-          apiAuthConfig?.onSessionExpired();
+          notifySessionExpired();
         }
         throw retryError;
       }
 
-      apiAuthConfig?.onSessionExpired();
+      notifySessionExpired();
     }
 
     throw error;
   }
 
-  return (await readJson<T>(response)) as T;
+  sessionExpiredNotified = false;
+  return (await readJson<T>(response, true)) as T;
 }

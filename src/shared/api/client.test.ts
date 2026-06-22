@@ -92,6 +92,24 @@ describe("apiRequest", () => {
     await expect(apiRequest<void>("/future-vision/weekly")).resolves.toBeUndefined();
   });
 
+  it("surfaces non-JSON success bodies as API client errors", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response("<!doctype html><title>oops</title>", {
+          headers: { "content-type": "text/html" },
+          status: 200,
+        }),
+      ),
+    );
+
+    await expect(apiRequest("/home/today")).rejects.toMatchObject({
+      message: "응답을 해석하지 못했습니다.",
+      name: "ApiClientError",
+      status: 200,
+    } satisfies Partial<ApiClientError>);
+  });
+
   it("wraps invalid JSON responses as API client errors", async () => {
     vi.stubGlobal(
       "fetch",
