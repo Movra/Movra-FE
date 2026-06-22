@@ -6,7 +6,6 @@ import characterDefault from "../../assets/auth/character-default.webp";
 import characterFocus from "../../assets/auth/character-focus.webp";
 import characterRecovery from "../../assets/auth/character-recovery.webp";
 import characterSuccess from "../../assets/auth/character-success.webp";
-import characterTopPick from "../../assets/auth/character-toppick.webp";
 import { getErrorMessage } from "../../shared/api/errors";
 import { queryKeys } from "../../shared/queryKeys";
 import { PageHeader } from "../../shared/ui/PageHeader";
@@ -677,10 +676,6 @@ export function CoreLoopDashboard() {
                 ) : null}
               </div>
             </div>
-
-            <div className={styles.topPickVisual} aria-hidden="true">
-              <img src={characterTopPick} alt="" />
-            </div>
           </section>
 
           {needsRecovery ? (
@@ -714,6 +709,7 @@ export function CoreLoopDashboard() {
             </section>
           ) : null}
 
+          <div className={styles.tileGrid}>
           <section className={styles.timetablePanel} aria-labelledby="timetable-title">
             <div className={styles.panelTitleRow}>
               <div>
@@ -935,6 +931,7 @@ export function CoreLoopDashboard() {
               </article>
             </div>
           </section>
+          </div>
         </main>
 
         <div className={styles.mobileStickyAction}>

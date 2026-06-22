@@ -1,5 +1,11 @@
 @font-face {
   font-family: "BMJUA";
+  src: url("../assets/fonts/BMJUA_ttf.ttf") format("truetype");
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "BMJUA";
   src: url("../assets/fonts/BMJUA_latin.woff2") format("woff2");
   font-display: swap;
   unicode-range: U+0020-007E;

@@ -7,7 +7,10 @@
   overflow: hidden;
   grid-template-columns: 232px minmax(0, 1fr);
   color: var(--color-ink);
-  background: linear-gradient(135deg, #ffffff 0%, #f8fbf5 54%, #f1f7ee 100%);
+  background:
+    radial-gradient(circle at 6% -4%, var(--color-primary-pale), transparent 34%),
+    radial-gradient(circle at 100% 0%, var(--color-primary-pale), transparent 30%),
+    linear-gradient(165deg, var(--color-canvas-soft) 0%, var(--color-canvas) 100%);
 }
 
 .sidebar {
@@ -234,13 +237,14 @@
 }
 
 .topHeader h1 {
-  overflow-wrap: anywhere;
   margin: 0;
   color: var(--color-ink);
+  font-family: var(--font-family-display);
   font-size: clamp(1.35rem, 2vw, 1.72rem);
   font-weight: 500;
   letter-spacing: 0;
   line-height: 1.2;
+  word-break: keep-all;
 }
 
 .topHeader p {
@@ -446,6 +450,7 @@
   overflow: hidden;
   margin: 0;
   color: var(--color-ink);
+  font-family: var(--font-family-display);
   font-size: var(--font-size-title);
   font-weight: 500;
   letter-spacing: 0;
@@ -1312,16 +1317,16 @@
 .topPickBoard {
   position: relative;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(220px, 320px);
-  column-gap: 32px;
-  align-items: center;
-  min-height: clamp(460px, calc(100dvh - 120px), 1100px);
-  padding: 32px 36px;
+  align-content: center;
+  min-height: clamp(300px, 52dvh, 500px);
+  padding: 36px 40px;
+  border: 1px solid var(--color-hairline);
   border-radius: 24px;
   background:
-    radial-gradient(circle at 96% 16%, rgba(84, 200, 121, 0.14), transparent 26%),
-    radial-gradient(circle at 88% 78%, rgba(84, 200, 121, 0.12), transparent 28%),
-    linear-gradient(135deg, #fffefd 0%, #f4faef 100%);
+    radial-gradient(circle at 97% 8%, rgba(84, 200, 121, 0.2), transparent 34%),
+    radial-gradient(circle at 90% 92%, rgba(84, 200, 121, 0.14), transparent 30%),
+    linear-gradient(135deg, var(--color-surface-card) 0%, var(--color-surface-tinted) 100%);
+  box-shadow: 0 22px 48px -28px rgba(39, 80, 51, 0.28);
 }
 
 .topPickContent {
@@ -1356,12 +1361,70 @@
   transform: translateY(-1px);
 }
 
+.flowRail {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  gap: 10px;
+  max-width: 520px;
+  margin: 0 0 22px;
+  padding: 0;
+  list-style: none;
+}
+
+.flowStep {
+  display: grid;
+  gap: 2px;
+  padding: 10px 14px;
+  border: 1px solid var(--color-hairline-soft);
+  border-radius: 14px;
+  background: var(--color-surface-tinted);
+}
+
+.flowStep span {
+  color: var(--color-muted);
+  font-size: var(--font-size-caption);
+}
+
+.flowStep strong {
+  overflow: hidden;
+  color: var(--color-body);
+  font-size: var(--font-size-body-sm);
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.flowStepDone {
+  border-color: rgba(47, 158, 91, 0.3);
+  background: var(--color-primary-soft);
+}
+
+.flowStepDone span,
+.flowStepDone strong {
+  color: var(--color-on-soft-green);
+}
+
+.flowStepActive {
+  border-color: var(--color-primary);
+  background: var(--color-surface-card);
+  box-shadow: 0 0 0 3px var(--color-primary-soft);
+}
+
+.flowStepActive strong {
+  color: var(--color-primary-active);
+}
+
 .topPickContent h2 {
-  max-width: 540px;
-  margin: 0 0 20px;
+  max-width: 640px;
+  margin: 0 0 22px;
   color: #0d432a;
-  font-size: clamp(1.7rem, 2.6vw, 2.4rem);
-  line-height: 1.24;
+  font-family: var(--font-family-display);
+  font-size: clamp(2rem, 3.4vw, 3rem);
+  font-weight: 600;
+  letter-spacing: -0.5px;
+  line-height: 1.18;
+  word-break: keep-all;
 }
 
 .topPickContent > p {
@@ -1386,9 +1449,10 @@
   max-width: 440px;
   margin-bottom: 14px;
   padding: 12px 14px;
-  border: 1px solid var(--color-hairline-soft);
+  border: 1px solid var(--color-hairline);
   border-radius: 14px;
-  background: rgba(255, 255, 255, 0.72);
+  background: var(--color-surface-card);
+  box-shadow: 0 10px 24px -18px rgba(39, 80, 51, 0.2);
 }
 
 .topPickMeta {
@@ -1476,17 +1540,36 @@
   background: var(--color-primary-pale);
 }
 
-.topPickVisual {
+.tileGrid {
   display: grid;
-  align-self: center;
-  place-items: center;
+  grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
+  grid-template-areas:
+    "timetable exam"
+    "timetable focus"
+    "vision vision"
+    "summary summary";
+  gap: 16px;
+  align-items: stretch;
 }
 
-.topPickVisual img {
-  width: min(100%, 300px);
-  max-height: 360px;
-  object-fit: contain;
-  filter: drop-shadow(0 18px 30px rgba(47, 122, 71, 0.16));
+.tileGrid .timetablePanel {
+  grid-area: timetable;
+}
+
+.tileGrid .examPanel {
+  grid-area: exam;
+}
+
+.tileGrid .focusPanel {
+  grid-area: focus;
+}
+
+.tileGrid .visionPanel {
+  grid-area: vision;
+}
+
+.tileGrid .summaryPanel {
+  grid-area: summary;
 }
 
 .timetablePanel {
@@ -1590,9 +1673,10 @@
 
 .weeklyGoalImage {
   width: 100%;
-  max-height: 150px;
+  max-height: 320px;
   border-radius: 12px;
-  object-fit: cover;
+  object-fit: contain;
+  background: var(--color-canvas-soft);
 }
 
 .goalFlow {
@@ -1825,12 +1909,8 @@
 }
 
 @media (max-width: 1180px) {
-  .topPickBoard {
-    grid-template-columns: minmax(0, 1fr) minmax(180px, 240px);
-  }
-
-  .topPickVisual img {
-    width: min(100%, 240px);
+  .tileGrid {
+    grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
   }
 }
 
@@ -1840,22 +1920,23 @@
   }
 
   .topPickBoard {
-    grid-template-columns: minmax(0, 1fr) 140px;
-    min-height: 56svh;
+    min-height: 44svh;
     padding: 24px 22px;
   }
 
-  .topPickContent {
-    gap: 0;
-  }
-
   .topPickContent h2 {
-    font-size: 1.7rem;
+    font-size: clamp(1.7rem, 6vw, 2rem);
     margin-bottom: 18px;
   }
 
-  .topPickVisual img {
-    width: min(100%, 132px);
+  .tileGrid {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "timetable"
+      "exam"
+      "focus"
+      "vision"
+      "summary";
   }
 
   .timetablePanel,
@@ -1901,18 +1982,8 @@
 }
 
 @media (max-width: 640px) {
-  .topPickBoard,
   .compactEmpty {
     grid-template-columns: 1fr;
-  }
-
-  .topPickVisual {
-    order: -1;
-    margin-bottom: 12px;
-  }
-
-  .topPickVisual img {
-    width: min(56%, 160px);
   }
 
   .actionRow {
