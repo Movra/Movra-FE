@@ -1,0 +1,29 @@
+{
+  "id": "INT-004",
+  "what": "HOME 마감 수정 3건: (1) BMJUA 폰트를 한글 포함 로드해 HOME 헤딩에 적용 (2) 제목·히어로 헤드라인 강제 줄바꿈(글자 중간 끊김) 제거해 단어 단위/한 줄 유지 (3) 주간 목표 시각화 이미지가 잘리는 문제(object-fit cover) 해결",
+  "why": "Pretendard가 로드 안 돼 시스템 폰트로 폴백 중이고 자산에는 BMJUA만 있다. 제목이 overflow-wrap:anywhere로 글자 중간에서 끊기고, 주간 목표 이미지는 max-height+cover로 거의 다 잘린다. 마감이 깨져 보여 완성도가 떨어진다.",
+  "type": "fix",
+  "scope": [
+    "src/features/core-loop/**",
+    "src/styles/**"
+  ],
+  "dod": [
+    "BMJUA 폰트가 한글 포함 실제 로드되어 HOME 헤딩(제목·히어로 헤드라인·섹션 타이틀)에 적용됨 — 스크린샷",
+    "HOME 제목·히어로 헤드라인이 글자 중간에서 강제로 끊기지 않고(word-break: keep-all) 공간이 되면 한 줄로 보임 — 스크린샷",
+    "주간 목표 시각화 이미지가 잘리지 않고 전체가 보인다(object-fit: contain) — 이미지 있는 상태 기준",
+    "본문 폰트·기능·레이아웃은 그대로(BMJUA는 디스플레이에만), API·데이터 불변",
+    "타입체크·빌드·core-loop 테스트 통과"
+  ],
+  "dodChecked": [
+    "BMJUA 폰트가 한글 포함 실제 로드되어 HOME 헤딩(제목·히어로 헤드라인·섹션 타이틀)에 적용됨 — 스크린샷",
+    "HOME 제목·히어로 헤드라인이 글자 중간에서 강제로 끊기지 않고(word-break: keep-all) 공간이 되면 한 줄로 보임 — 스크린샷",
+    "주간 목표 시각화 이미지가 잘리지 않고 전체가 보인다(object-fit: contain) — 이미지 있는 상태 기준",
+    "본문 폰트·기능·레이아웃은 그대로(BMJUA는 디스플레이에만), API·데이터 불변",
+    "타입체크·빌드·core-loop 테스트 통과"
+  ],
+  "status": "done",
+  "approvedBy": "human",
+  "learnings": "한글 강제 줄바꿈 원인은 .topHeader h1의 overflow-wrap:anywhere. word-break:keep-all로 교체하면 한글이 단어(공백) 단위로만 줄바꿈돼 음절 중간 끊김이 사라짐. 이미지 잘림은 object-fit:cover+max-height → contain+배경으로 해결.",
+  "createdAt": "2026-06-18T23:39:30.176Z",
+  "updatedAt": "2026-06-18T23:54:43.627Z"
+}

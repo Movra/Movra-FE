@@ -1,0 +1,30 @@
+{
+  "id": "INT-005",
+  "what": "코드 리뷰에서 도출한 12개 품질·안정성 문제를 src 전반에 수정한다: API 응답 타이핑(비-JSON 2xx 표면화), 쿼리 URL 인코딩 일관화, env 프로덕션 가드, sleepHoursQuiet 상수화, parseTimeToMinutes 실패 처리, 채팅 메시지 상한, 세션만료 중복호출 가드, 토스트 타이머 일관화(toastId), 시계오차 완화, OPEN 타이머 sessionStorage 영속화, 공통 훅(useToast/usePageGate) 추출, 위험 로직(드래그·타이머) 훅 분리",
+  "why": "시니어 코드 리뷰 결과 런타임 undefined 전파(High)와 대형 페이지 SRP 위반(High) 등 잠재 버그·유지보수 부채가 식별됐다. 방치하면 인증·데이터 흐름 크래시와 회귀 위험이 누적되고 테스트·확장이 어려워진다.",
+  "type": "fix",
+  "scope": [
+    "src/**"
+  ],
+  "dod": [
+    "apiRequest 성공 경로가 2xx 비-JSON 본문을 ApiClientError로 표면화하고 204·빈본문은 기존대로 undefined (client.test.ts + 신규 테스트 통과)",
+    "모든 쿼리 파라미터가 URLSearchParams/encodeURIComponent로 인코딩됨",
+    "env가 프로덕션에서 VITE_API_BASE_URL 누락 시 명시적으로 실패하고 dev/test만 localhost 폴백",
+    "parseTimeToMinutes가 잘못된 입력을 조용히 0으로 만들지 않음",
+    "채팅 메시지 배열에 보관 상한이 적용됨",
+    "세션 만료(onSessionExpired) 중복 호출이 가드됨",
+    "토스트 자동닫힘 타이머가 동일 메시지 재설정 시에도 갱신됨(toastId 패턴)",
+    "OPEN 집중 타이머 시작 시각이 sessionStorage에 영속화·복원됨",
+    "useToast·usePageGate 등 공통 훅이 추출되어 페이지 중복이 감소",
+    "TimetablePage 드래그·타이머 등 위험 로직이 테스트 가능한 훅으로 분리됨",
+    "sleepHoursQuietEnabled 강제 ON 의도가 명명된 상수로 표현됨",
+    "기존 실패 테스트(StudyRoomPage)의 원인이 수정됨",
+    "타입체크와 전체 테스트가 통과함"
+  ],
+  "dodChecked": [],
+  "status": "approved",
+  "approvedBy": "human",
+  "learnings": null,
+  "createdAt": "2026-06-19T00:15:28.434Z",
+  "updatedAt": "2026-06-19T01:24:54.801Z"
+}

@@ -22,9 +22,9 @@
     "API 호출·응답 타입·쿼리 키 변경 0건, diff는 core-loop 시각/레이아웃/카피에 한정",
     "타입체크·빌드 통과"
   ],
-  "status": "done",
+  "status": "approved",
   "approvedBy": "human",
   "learnings": "검증은 npm run smoke:visual이 /(HOME)을 1440x900/390x844 뷰포트로 스크린샷 → 첫 뷰포트 DoD 검증에 그대로 활용 가능. 모바일 첫 화면은 사이드바가 상단 내비로 접혀 공간을 차지함(이번 스코프 밖, 후속 후보).",
   "createdAt": "2026-06-18T06:15:45.534Z",
-  "updatedAt": "2026-06-18T06:49:33.953Z"
+  "updatedAt": "2026-06-18T10:03:41.026Z"
 }

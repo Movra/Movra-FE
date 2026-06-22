@@ -1,0 +1,30 @@
+{
+  "id": "INT-002",
+  "what": "HOME 히어로를 green 계열 톤 레이어링(canvas/tinted/card 표면 분리)과 헤어라인+부드러운 소프트 섀도우+leaf blob로 차분한 깊이를 주어 평평함과 단조로움을 해소",
+  "why": "INT-001로 복잡도는 줄었으나 히어로가 흰 배경에 묻혀 평평하고 green 단일 톤이라 단조롭다. design.md가 정의한 표면 팔레트를 실제로 써서 깊이·톤을 복원하지 않으면 '비어 보이고 미완성' 인상이 남는다.",
+  "type": "feature",
+  "scope": [
+    "src/features/core-loop/**"
+  ],
+  "dod": [
+    "히어로 카드가 배경에서 또렷이 분리돼 보인다(표면 대비 + 1px hairline + 부드러운 소프트 섀도우) — 스크린샷 확인",
+    "화면에 green 톤이 최소 3단계 레이어로 읽힌다(canvas 배경 / tinted 밴드 / white 카드). 단일 흰 톤 아님",
+    "green 외 새 hue(액센트 색) 0건 — CSS에 비-green 계열 색 추가 없음",
+    "무거운 드롭섀도우 없음(과대 blur box-shadow 없음), 게임화·손실 어휘 0건",
+    "요소/섹션/위젯 개수는 INT-001 대비 증가 없음(복잡도 동결)",
+    "타입체크·빌드·core-loop 테스트 통과"
+  ],
+  "dodChecked": [
+    "히어로 카드가 배경에서 또렷이 분리돼 보인다(표면 대비 + 1px hairline + 부드러운 소프트 섀도우) — 스크린샷 확인",
+    "화면에 green 톤이 최소 3단계 레이어로 읽힌다(canvas 배경 / tinted 밴드 / white 카드). 단일 흰 톤 아님",
+    "green 외 새 hue(액센트 색) 0건 — CSS에 비-green 계열 색 추가 없음",
+    "무거운 드롭섀도우 없음(과대 blur box-shadow 없음), 게임화·손실 어휘 0건",
+    "요소/섹션/위젯 개수는 INT-001 대비 증가 없음(복잡도 동결)",
+    "타입체크·빌드·core-loop 테스트 통과"
+  ],
+  "status": "done",
+  "approvedBy": "human",
+  "learnings": "단조로움 해소는 새 hue가 아니라 green 표면 토큰(canvas/canvas-soft/surface-tinted/surface-card/primary-soft/primary-pale)으로 톤 레이어를 만들어 해결. 깊이는 무거운 그림자 대신 음수 spread 소프트 섀도우(예: 0 22px 48px -28px)+hairline으로.",
+  "createdAt": "2026-06-18T10:05:11.119Z",
+  "updatedAt": "2026-06-18T13:05:46.354Z"
+}
