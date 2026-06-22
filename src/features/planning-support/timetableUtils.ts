@@ -18,11 +18,21 @@ export function toApiTime(time: string) {
 }
 
 export function parseTimeToMinutes(time: string) {
-  const normalized = normalizeTimeInput(time);
-  const [hour, minute] = normalized.split(":").map(Number);
+  const match = /^(\d{1,2}):(\d{2})(?::(\d{2}))?$/.exec(time);
+  const hour = Number(match?.[1]);
+  const minute = Number(match?.[2]);
+  const second = Number(match?.[3] ?? 0);
+  const isValid =
+    match !== null &&
+    minute >= 0 &&
+    minute < 60 &&
+    second >= 0 &&
+    second < 60 &&
+    ((hour >= 0 && hour < 24) ||
+      (hour === 24 && minute === 0 && second === 0));
 
-  if (!Number.isInteger(hour) || !Number.isInteger(minute)) {
-    return 0;
+  if (!isValid) {
+    throw new RangeError(`Invalid timetable time: ${JSON.stringify(time)}`);
   }
 
   return hour * 60 + minute;

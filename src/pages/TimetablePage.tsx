@@ -55,21 +55,26 @@ import {
   getSlotDurationMinutes,
   getSortedSlots,
   getTimelineRange,
-  hasTimeOverlap,
   hourRowHeight,
   isCompactSlotHeight,
   minSlotMinutes,
   minutesToTimeInput,
   normalizeDuration,
-  normalizeTimeInput,
   parseTimeToMinutes,
   snapToStep,
   toApiTime,
   validateTimeRange,
 } from "../features/planning-support/timetableUtils";
+import {
+  type SlotInteraction,
+  type SlotPreview,
+  useTimetableSlotInteraction,
+} from "../features/planning-support/useTimetableSlotInteraction";
 import { ApiClientError } from "../shared/api/client";
 import { queryKeys } from "../shared/queryKeys";
 import { PageHeader } from "../shared/ui/PageHeader";
+import { usePageGate } from "../shared/ui/usePageGate";
+import { useToast } from "../shared/ui/useToast";
 import styles from "./TimetablePage.module.css";
 
 const homeTodayKey = queryKeys.homeToday();
@@ -93,24 +98,6 @@ type AssignmentDraft = {
   taskId: string;
   topPick: boolean;
   type: "task" | "topPick";
-};
-
-type SlotInteraction = {
-  mode: "move" | "resizeEnd" | "resizeStart";
-  originY: number;
-  originalEndMinute: number;
-  originalStartMinute: number;
-  slotId: string;
-};
-
-type SlotPreview = {
-  endMinute: number;
-  slotId: string;
-  startMinute: number;
-};
-
-type DragPreview = SlotPreview & {
-  blocked: boolean;
 };
 
 type DeleteSlotRequest = {
@@ -549,61 +536,6 @@ function parseDraggedDraft(event: DragEvent<HTMLElement>) {
   }
 }
 
-function calculateSlotInteractionCandidate({
-  clientY,
-  interaction,
-  timelineEndMinute,
-  timelineStartMinute,
-}: {
-  clientY: number;
-  interaction: SlotInteraction;
-  timelineEndMinute: number;
-  timelineStartMinute: number;
-}) {
-  const originY = Number.isFinite(interaction.originY)
-    ? interaction.originY
-    : 0;
-  const safeClientY = Number.isFinite(clientY) ? clientY : originY;
-  const deltaMinute = snapToStep(
-    ((safeClientY - originY) / hourRowHeight) * 60,
-  );
-  const duration =
-    interaction.originalEndMinute - interaction.originalStartMinute;
-
-  if (interaction.mode === "move") {
-    const startMinute = clamp(
-      interaction.originalStartMinute + deltaMinute,
-      timelineStartMinute,
-      timelineEndMinute - duration,
-    );
-
-    return {
-      endMinute: startMinute + duration,
-      startMinute,
-    };
-  }
-
-  if (interaction.mode === "resizeStart") {
-    return {
-      endMinute: interaction.originalEndMinute,
-      startMinute: clamp(
-        interaction.originalStartMinute + deltaMinute,
-        timelineStartMinute,
-        interaction.originalEndMinute - minSlotMinutes,
-      ),
-    };
-  }
-
-  return {
-    endMinute: clamp(
-      interaction.originalEndMinute + deltaMinute,
-      interaction.originalStartMinute + minSlotMinutes,
-      timelineEndMinute,
-    ),
-    startMinute: interaction.originalStartMinute,
-  };
-}
-
 function TimetableEmptyState({
   hasDailyPlan,
   isContractMissing,
@@ -648,27 +580,25 @@ export function TimetablePage() {
   const token = accessToken ?? "";
   const queryClient = useQueryClient();
   const timelineCanvasRef = useRef<HTMLDivElement | null>(null);
-  const dragFrameRef = useRef<number | null>(null);
-  const dragPreviewRef = useRef<DragPreview | null>(null);
-  const pendingPointerYRef = useRef<number | null>(null);
   const pendingTopPickSlotRequestsRef = useRef(new Set<Promise<void>>());
   const slotBlockRefs = useRef(new Map<string, HTMLElement>());
   const slotDurationRefs = useRef(new Map<string, HTMLElement>());
   const slotRangeRefs = useRef(new Map<string, HTMLElement>());
-  const [actionError, setActionError] = useState<string | null>(null);
-  const [actionNotice, setActionNotice] = useState<string | null>(null);
   const [composerOpen, setComposerOpen] = useState(false);
   const [addMode, setAddMode] = useState<AddMode>("topPick");
   const [slotForm, setSlotForm] = useState<SlotForm>(emptySlotForm);
-  const [toastClosing, setToastClosing] = useState(false);
-  const [toastId, setToastId] = useState(0);
+  const {
+    actionError,
+    actionNotice,
+    setActionError,
+    setActionNotice,
+    toastLeaving: toastClosing,
+  } = useToast({ visibleMs: 1500, fadeMs: 260 });
   const [selectedDraft, setSelectedDraft] = useState<AssignmentDraft | null>(null);
   const [memoDialog, setMemoDialog] = useState<TopPick | null>(null);
   const [reassignableTaskIds, setReassignableTaskIds] = useState<Set<string>>(
     () => new Set(),
   );
-  const [slotInteraction, setSlotInteraction] =
-    useState<SlotInteraction | null>(null);
   const [editingTaskSlot, setEditingTaskSlot] = useState<{
     slot: TimetableSlot;
     task: DailyPlanTask;
@@ -693,6 +623,11 @@ export function TimetablePage() {
   });
 
   const home = homeQuery.data;
+  const shouldRedirectToOnboarding = usePageGate({
+    behaviorProfile: home?.behaviorProfile,
+    queriedBehaviorProfile: behaviorProfileQuery.data,
+    queriedBehaviorProfileFailed: behaviorProfileQuery.isError,
+  });
   const dailyPlan = dailyPlanQuery.data ?? home?.todayDailyPlan ?? null;
   const dailyPlanId =
     dailyPlan?.dailyPlanId ?? home?.timetable?.dailyPlanId ?? "";
@@ -797,6 +732,13 @@ export function TimetablePage() {
     timelineCanvasRef.current?.classList.toggle(styles.timelineBlocked, blocked);
   }, []);
 
+  const clearDraggingDomState = useCallback((slotId: string) => {
+    slotBlockRefs.current
+      .get(slotId)
+      ?.classList.remove(styles.slotBlockDragging);
+    timelineCanvasRef.current?.classList.remove(styles.timelineBlocked);
+  }, []);
+
   const resetSlotDom = useCallback(
     (slot: TimetableSlot) => {
       const startMinute = parseTimeToMinutes(slot.startTime);
@@ -838,19 +780,15 @@ export function TimetablePage() {
     ]);
   }
 
-  function showActionError(message: string) {
-    setToastClosing(false);
+  const showActionError = useCallback((message: string) => {
     setActionNotice(null);
     setActionError(message);
-    setToastId((current) => current + 1);
-  }
+  }, [setActionError, setActionNotice]);
 
-  function showActionNotice(message: string) {
-    setToastClosing(false);
+  const showActionNotice = useCallback((message: string) => {
     setActionError(null);
     setActionNotice(message);
-    setToastId((current) => current + 1);
-  }
+  }, [setActionError, setActionNotice]);
 
   function handleMutationError(error: unknown) {
     if (isTopPickPlacementError(error)) {
@@ -1437,27 +1375,18 @@ export function TimetablePage() {
     },
   });
 
-  useEffect(() => {
-    if (!actionError && !actionNotice) {
-      return undefined;
-    }
-
-    setToastClosing(false);
-
-    const fadeTimer = window.setTimeout(() => {
-      setToastClosing(true);
-    }, 1500);
-    const clearTimer = window.setTimeout(() => {
-      setActionError(null);
-      setActionNotice(null);
-      setToastClosing(false);
-    }, 1760);
-
-    return () => {
-      window.clearTimeout(fadeTimer);
-      window.clearTimeout(clearTimer);
-    };
-  }, [actionError, actionNotice, toastId]);
+  const handleSlotReschedule = rescheduleSlotMutation.mutate;
+  const { beginSlotInteraction } = useTimetableSlotInteraction({
+    applySlotDomPosition,
+    clearDraggingDomState,
+    onError: showActionError,
+    onReschedule: handleSlotReschedule,
+    resetSlotDom,
+    setDraggingDomState,
+    slots: sortedSlots,
+    timelineEndMinute,
+    timelineStartMinute,
+  });
 
   useEffect(() => {
     if (!composerOpen) {
@@ -1476,165 +1405,6 @@ export function TimetablePage() {
       window.removeEventListener("keydown", handleKeyDown);
     };
   }, [composerOpen]);
-
-  useEffect(() => {
-    if (!slotInteraction) {
-      return undefined;
-    }
-
-    const timelineCanvasElement = timelineCanvasRef.current;
-
-    function updateInteractionPreview(clientY: number) {
-      const activeInteraction = slotInteraction;
-
-      if (!activeInteraction) {
-        return;
-      }
-
-      const candidate = calculateSlotInteractionCandidate({
-        clientY,
-        interaction: activeInteraction,
-        timelineEndMinute,
-        timelineStartMinute,
-      });
-      const overlap = hasTimeOverlap({
-        endMinute: candidate.endMinute,
-        ignoreSlotId: activeInteraction.slotId,
-        slots: sortedSlots,
-        startMinute: candidate.startMinute,
-      });
-      const nextPreview: DragPreview = {
-        blocked: overlap,
-        endMinute: candidate.endMinute,
-        slotId: activeInteraction.slotId,
-        startMinute: candidate.startMinute,
-      };
-      const currentPreview = dragPreviewRef.current;
-
-      if (
-        currentPreview?.slotId === nextPreview.slotId &&
-        currentPreview.startMinute === nextPreview.startMinute &&
-        currentPreview.endMinute === nextPreview.endMinute &&
-        currentPreview.blocked === nextPreview.blocked
-      ) {
-        return;
-      }
-
-      dragPreviewRef.current = nextPreview;
-      setDraggingDomState(activeInteraction.slotId, overlap);
-
-      if (!overlap) {
-        applySlotDomPosition(nextPreview);
-      }
-    }
-
-    function handlePointerMove(event: globalThis.PointerEvent) {
-      pendingPointerYRef.current = event.clientY;
-
-      if (dragFrameRef.current !== null) {
-        return;
-      }
-
-      dragFrameRef.current = window.requestAnimationFrame(() => {
-        dragFrameRef.current = null;
-
-        if (pendingPointerYRef.current !== null) {
-          updateInteractionPreview(pendingPointerYRef.current);
-        }
-      });
-    }
-
-    function handlePointerUp(event: globalThis.PointerEvent) {
-      if (!slotInteraction) {
-        return;
-      }
-
-      if (dragFrameRef.current !== null) {
-        window.cancelAnimationFrame(dragFrameRef.current);
-        dragFrameRef.current = null;
-      }
-      pendingPointerYRef.current = null;
-
-      const candidate = calculateSlotInteractionCandidate({
-        clientY: event.clientY,
-        interaction: slotInteraction,
-        timelineEndMinute,
-        timelineStartMinute,
-      });
-      const error = validateTimeRange({
-        endMinute: candidate.endMinute,
-        ignoreSlotId: slotInteraction.slotId,
-        slots: sortedSlots,
-        startMinute: candidate.startMinute,
-      });
-      const slot = sortedSlots.find(
-        (candidateSlot) => candidateSlot.slotId === slotInteraction.slotId,
-      );
-
-      setSlotInteraction(null);
-      dragPreviewRef.current = null;
-
-      if (!slot) {
-        timelineCanvasRef.current?.classList.remove(styles.timelineBlocked);
-        return;
-      }
-
-      if (error) {
-        resetSlotDom(slot);
-        setToastClosing(false);
-        setActionNotice(null);
-        setActionError(error);
-        setToastId((current) => current + 1);
-        return;
-      }
-
-      const nextStartTime = minutesToTimeInput(candidate.startMinute);
-      const nextEndTime = minutesToTimeInput(candidate.endMinute);
-
-      if (
-        normalizeTimeInput(slot.startTime) === nextStartTime &&
-          normalizeTimeInput(slot.endTime) === nextEndTime
-      ) {
-        resetSlotDom(slot);
-        return;
-      }
-
-      slotBlockRefs.current
-        .get(slot.slotId)
-        ?.classList.remove(styles.slotBlockDragging);
-      timelineCanvasRef.current?.classList.remove(styles.timelineBlocked);
-
-      rescheduleSlotMutation.mutate({
-        endTime: nextEndTime,
-        slotId: slot.slotId,
-        startTime: nextStartTime,
-      });
-    }
-
-    window.addEventListener("pointermove", handlePointerMove);
-    window.addEventListener("pointerup", handlePointerUp);
-
-    return () => {
-      if (dragFrameRef.current !== null) {
-        window.cancelAnimationFrame(dragFrameRef.current);
-        dragFrameRef.current = null;
-      }
-      pendingPointerYRef.current = null;
-      dragPreviewRef.current = null;
-      timelineCanvasElement?.classList.remove(styles.timelineBlocked);
-      window.removeEventListener("pointermove", handlePointerMove);
-      window.removeEventListener("pointerup", handlePointerUp);
-    };
-  }, [
-    applySlotDomPosition,
-    resetSlotDom,
-    slotInteraction,
-    sortedSlots,
-    setDraggingDomState,
-    timelineEndMinute,
-    timelineStartMinute,
-    rescheduleSlotMutation,
-  ]);
 
   if (homeQuery.isLoading || dailyPlanQuery.isLoading) {
     return (
@@ -1669,11 +1439,7 @@ export function TimetablePage() {
     return null;
   }
 
-  if (
-    home.behaviorProfile === null ||
-    behaviorProfileQuery.data === null ||
-    behaviorProfileQuery.isError
-  ) {
+  if (shouldRedirectToOnboarding) {
     return <Navigate to="/onboarding" replace />;
   }
 
@@ -1910,14 +1676,7 @@ export function TimetablePage() {
     const startMinute = parseTimeToMinutes(slot.startTime);
     const endMinute = parseTimeToMinutes(slot.endTime);
 
-    dragPreviewRef.current = {
-      blocked: false,
-      endMinute,
-      slotId: slot.slotId,
-      startMinute,
-    };
-    setDraggingDomState(slot.slotId, false);
-    setSlotInteraction({
+    beginSlotInteraction({
       mode,
       originY: event.clientY,
       originalEndMinute: endMinute,

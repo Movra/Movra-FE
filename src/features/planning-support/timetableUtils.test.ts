@@ -40,6 +40,13 @@ describe("timetable utils", () => {
     expect(snapToStep(22)).toBe(15);
   });
 
+  it("rejects malformed or out-of-range time values", () => {
+    expect(() => parseTimeToMinutes("")).toThrow(RangeError);
+    expect(() => parseTimeToMinutes("09:60")).toThrow(RangeError);
+    expect(() => parseTimeToMinutes("24:15")).toThrow(RangeError);
+    expect(parseTimeToMinutes("24:00:00")).toBe(1440);
+  });
+
   it("normalizes durations and formats duration labels", () => {
     expect(normalizeDuration(1)).toBe(15);
     expect(normalizeDuration(61)).toBe(75);
