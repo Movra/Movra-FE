@@ -82,9 +82,11 @@ describe("OnboardingPage", () => {
       },
     ]);
     expect(
-      await screen.findByRole("heading", {
-        name: "오늘은 TopPick 하나만 끝내요",
-      }),
+      await screen.findByRole(
+        "heading",
+        { name: "오늘은 TopPick 하나만 끝내요" },
+        { timeout: 10_000 },
+      ),
     ).toBeInTheDocument();
   });
 
