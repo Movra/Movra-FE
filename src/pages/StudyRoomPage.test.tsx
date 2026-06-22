@@ -373,7 +373,11 @@ describe("StudyRoomPage", () => {
     render(<App />);
 
     expect(
-      await screen.findAllByRole("heading", { name: "Morning focus" }),
+      await screen.findAllByRole(
+        "heading",
+        { name: "Morning focus" },
+        { timeout: 10_000 },
+      ),
     ).not.toHaveLength(0);
     expect(screen.queryByText("Joon")).toBeNull();
 

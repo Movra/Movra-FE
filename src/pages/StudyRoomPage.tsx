@@ -242,14 +242,15 @@ function getParticipantFocusSeconds({
   }
 
   if (participant.userId === currentUserId && localFocusStartedAt) {
-    return Math.floor((now - localFocusStartedAt) / 1000);
+    return Math.max(0, Math.floor((now - localFocusStartedAt) / 1000));
   }
 
   if (participant.focusStartedAt) {
     const focusStartedAt = Date.parse(participant.focusStartedAt);
 
     if (Number.isFinite(focusStartedAt)) {
-      return Math.floor((now - focusStartedAt) / 1000);
+      // Guard against clock skew producing a negative elapsed value.
+      return Math.max(0, Math.floor((now - focusStartedAt) / 1000));
     }
   }
 
@@ -389,6 +390,16 @@ export function StudyRoomPage() {
   const [memberModalOpen, setMemberModalOpen] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [actionNotice, setActionNotice] = useState<string | null>(null);
+  const [toastId, setToastId] = useState(0);
+
+  function showNotice(message: string) {
+    setActionError(null);
+    setActionNotice(message);
+    // Bump the id so the auto-dismiss timer re-arms even when the same
+    // message is shown twice in a row.
+    setToastId((current) => current + 1);
+  }
+
   const joinedRoomIdsRef = useRef<Set<string>>(new Set());
   const leavingRoomIdsRef = useRef<Set<string>>(new Set());
   const redirectedRoomRemovalIdsRef = useRef<Set<string>>(new Set());
@@ -478,7 +489,7 @@ export function StudyRoomPage() {
       actionNoticeDurationMs,
     );
     return () => window.clearTimeout(timeoutId);
-  }, [actionNotice]);
+  }, [actionNotice, toastId]);
 
   function closeCreateModal() {
     setCreateModalOpen(false);
@@ -534,8 +545,7 @@ export function StudyRoomPage() {
         return next;
       });
       setMemberModalOpen(false);
-      setActionError(null);
-      setActionNotice("방에서 내보내졌어요.");
+      showNotice("방에서 내보내졌어요.");
       void queryClient.invalidateQueries({
         queryKey: queryKeys.studyRoomParticipants(roomId),
       });
@@ -632,8 +642,7 @@ export function StudyRoomPage() {
         visibility: values.visibility,
       };
 
-      setActionError(null);
-      setActionNotice("스터디룸을 만들었어요.");
+      showNotice("스터디룸을 만들었어요.");
       setCreatedRoom(nextCreatedRoom);
       setCreateModalOpen(false);
       setInviteModalRoom(shouldOpenInviteModal ? nextCreatedRoom : null);
@@ -660,8 +669,7 @@ export function StudyRoomPage() {
       setActionError(getErrorMessage(error));
     },
     onSuccess: async (_result, values) => {
-      setActionError(null);
-      setActionNotice("스터디룸에 참여했어요.");
+      showNotice("스터디룸에 참여했어요.");
       await refreshStudyRooms(values.roomId);
       navigate(getRoomPath(values.roomId));
     },
@@ -679,8 +687,7 @@ export function StudyRoomPage() {
       setActionError(getErrorMessage(error));
     },
     onSuccess: async (_result, values) => {
-      setActionError(null);
-      setActionNotice("초대 코드로 스터디룸에 참여했어요.");
+      showNotice("초대 코드로 스터디룸에 참여했어요.");
       setInviteJoinModalOpen(false);
       setPrivateJoinForm({ inviteCode: "" });
 
@@ -736,8 +743,7 @@ export function StudyRoomPage() {
       setActionError(getErrorMessage(error));
     },
     onSuccess: (response, roomId) => {
-      setActionError(null);
-      setActionNotice("초대 코드를 다시 생성했어요.");
+      showNotice("초대 코드를 다시 생성했어요.");
       setInviteModalRoom((current) =>
         current?.roomId === roomId
           ? { ...current, inviteCode: response.inviteCode }
@@ -759,8 +765,7 @@ export function StudyRoomPage() {
     },
     onSuccess: async (_result, roomId) => {
       leavingRoomIdsRef.current.add(roomId);
-      setActionError(null);
-      setActionNotice("스터디룸에서 나갔어요.");
+      showNotice("스터디룸에서 나갔어요.");
       setLocalFocusStartedAtByRoom((current) => {
         const next = { ...current };
         delete next[roomId];
@@ -784,8 +789,7 @@ export function StudyRoomPage() {
       setActionError(getErrorMessage(error));
     },
     onSuccess: async (_result, values) => {
-      setActionError(null);
-      setActionNotice("참여자를 내보냈어요.");
+      showNotice("참여자를 내보냈어요.");
       await refreshStudyRooms(values.roomId);
     },
   });
@@ -797,8 +801,7 @@ export function StudyRoomPage() {
       setActionError(getErrorMessage(error));
     },
     onSuccess: async (_result, roomId) => {
-      setActionError(null);
-      setActionNotice("집중 상태로 전환했어요.");
+      showNotice("집중 상태로 전환했어요.");
       setLocalFocusStartedAtByRoom((current) => ({
         ...current,
         [roomId]: Date.now(),
@@ -814,8 +817,7 @@ export function StudyRoomPage() {
       setActionError(getErrorMessage(error));
     },
     onSuccess: async (_result, roomId) => {
-      setActionError(null);
-      setActionNotice("휴식 상태로 전환했어요.");
+      showNotice("휴식 상태로 전환했어요.");
       setLocalFocusStartedAtByRoom((current) => {
         const next = { ...current };
         delete next[roomId];
@@ -929,8 +931,7 @@ export function StudyRoomPage() {
 
     try {
       await navigator.clipboard.writeText(inviteText);
-      setActionError(null);
-      setActionNotice("초대 정보를 복사했어요.");
+      showNotice("초대 정보를 복사했어요.");
     } catch {
       setActionNotice(null);
       setActionError("초대 정보를 복사하지 못했습니다.");

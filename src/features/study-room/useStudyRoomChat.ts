@@ -13,6 +13,10 @@ type UseStudyRoomChatOptions = {
   token: string;
 };
 
+// Cap retained messages so a long-lived connection cannot grow the array
+// (and its re-renders) without bound.
+const maxRetainedMessages = 200;
+
 export function useStudyRoomChat({
   enabled,
   roomId,
@@ -46,7 +50,9 @@ export function useStudyRoomChat({
         },
         onMessage: (message) => {
           if (isActive) {
-            setMessages((current) => [...current, message]);
+            setMessages((current) =>
+              [...current, message].slice(-maxRetainedMessages),
+            );
           }
         },
         onStatusChange: (nextStatus) => {
