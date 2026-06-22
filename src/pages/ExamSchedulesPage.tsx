@@ -23,6 +23,7 @@ import {
 import { getErrorMessage } from "../shared/api/errors";
 import { queryKeys } from "../shared/queryKeys";
 import { PageHeader } from "../shared/ui/PageHeader";
+import { usePageGate } from "../shared/ui/usePageGate";
 import styles from "./ExamSchedulesPage.module.css";
 
 type DialogState =
@@ -166,6 +167,9 @@ export function ExamSchedulesPage() {
   });
 
   const home = homeQuery.data;
+  const shouldRedirectToOnboarding = usePageGate({
+    behaviorProfile: home?.behaviorProfile,
+  });
   const exams = examSchedulesQuery.data ?? [];
 
   async function refreshSchedules() {
@@ -260,7 +264,7 @@ export function ExamSchedulesPage() {
     return null;
   }
 
-  if (home.behaviorProfile === null) {
+  if (shouldRedirectToOnboarding) {
     return <Navigate to="/onboarding" replace />;
   }
 

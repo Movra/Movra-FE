@@ -31,11 +31,16 @@ import { subscribeBrowserToWebPush } from "../features/notification/webPush";
 import { getErrorMessage } from "../shared/api/errors";
 import { queryKeys } from "../shared/queryKeys";
 import { PageHeader } from "../shared/ui/PageHeader";
+import { usePageGate } from "../shared/ui/usePageGate";
 import styles from "./SettingsPage.module.css";
 
 const homeTodayKey = queryKeys.homeToday();
 const notificationPreferenceKey = queryKeys.notificationPreference();
 const webPushEndpointStorageKey = "movra:webPushEndpoint";
+
+// Product policy: sleep-hours quiet is always on. The client intentionally
+// ignores the server value for this field and forces it enabled.
+const SLEEP_HOURS_QUIET_ALWAYS_ON = true;
 
 const executionDifficultyLabels: Record<ExecutionDifficulty, string> = {
   HIGH: "어려움",
@@ -96,7 +101,7 @@ function createDefaultNotificationForm(): NotificationFormState {
     schoolHoursEnd: "15:30",
     schoolHoursQuietEnabled: true,
     schoolHoursStart: "08:00",
-    sleepHoursQuietEnabled: true,
+    sleepHoursQuietEnabled: SLEEP_HOURS_QUIET_ALWAYS_ON,
     weekendSchoolQuietEnabled: false,
   };
 }
@@ -129,6 +134,10 @@ export function SettingsPage() {
     queryFn: ({ signal }) => getHomeToday({ signal, token }),
     queryKey: homeTodayKey,
   });
+  const home = homeQuery.data;
+  const shouldRedirectToOnboarding = usePageGate({
+    behaviorProfile: home?.behaviorProfile,
+  });
 
   const preferenceQuery = useQuery({
     enabled: Boolean(token),
@@ -151,7 +160,7 @@ export function SettingsPage() {
       schoolHoursEnd: preference.schoolHoursEnd,
       schoolHoursQuietEnabled: preference.schoolHoursQuietEnabled,
       schoolHoursStart: preference.schoolHoursStart,
-      sleepHoursQuietEnabled: true,
+      sleepHoursQuietEnabled: SLEEP_HOURS_QUIET_ALWAYS_ON,
       weekendSchoolQuietEnabled: preference.weekendSchoolQuietEnabled,
     });
   }, [preference]);
@@ -235,12 +244,11 @@ export function SettingsPage() {
     );
   }
 
-  const home = homeQuery.data;
   if (!home) {
     return null;
   }
 
-  if (home.behaviorProfile === null) {
+  if (shouldRedirectToOnboarding) {
     return <Navigate to="/onboarding" replace />;
   }
 
@@ -323,7 +331,7 @@ export function SettingsPage() {
     setActionError(null);
     updatePreferenceMutation.mutate({
       ...notificationForm,
-      sleepHoursQuietEnabled: true,
+      sleepHoursQuietEnabled: SLEEP_HOURS_QUIET_ALWAYS_ON,
     });
   }
 

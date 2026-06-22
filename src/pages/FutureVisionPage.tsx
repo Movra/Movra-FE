@@ -27,6 +27,7 @@ import { getErrorMessage } from "../shared/api/errors";
 import { validateImageFile } from "../shared/file/imageValidation";
 import { queryKeys } from "../shared/queryKeys";
 import { PageHeader } from "../shared/ui/PageHeader";
+import { usePageGate } from "../shared/ui/usePageGate";
 import styles from "./FutureVisionPage.module.css";
 
 type VisionTab = "yearly" | "weekly";
@@ -143,6 +144,9 @@ export function FutureVisionPage() {
 
   const futureVision = homeQuery.data?.futureVision ?? null;
   const home = homeQuery.data;
+  const shouldRedirectToOnboarding = usePageGate({
+    behaviorProfile: home?.behaviorProfile,
+  });
 
   useEffect(() => {
     if (futureVision?.yearlyVisionDescription) {
@@ -457,7 +461,7 @@ export function FutureVisionPage() {
     return null;
   }
 
-  if (home.behaviorProfile === null) {
+  if (shouldRedirectToOnboarding) {
     return <Navigate to="/onboarding" replace />;
   }
 

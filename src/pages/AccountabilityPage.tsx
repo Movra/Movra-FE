@@ -28,6 +28,7 @@ import { AppSidebar } from "../features/core-loop/AppSidebar";
 import { getErrorMessage } from "../shared/api/errors";
 import { queryKeys } from "../shared/queryKeys";
 import { PageHeader } from "../shared/ui/PageHeader";
+import { useToast } from "../shared/ui/useToast";
 import styles from "./AccountabilityPage.module.css";
 
 type AccountabilityView = "overview" | "share" | "watch";
@@ -330,9 +331,8 @@ export function AccountabilityPage() {
   const [summaryRequest, setSummaryRequest] = useState<SummaryRequest | null>(
     null,
   );
-  const [actionError, setActionError] = useState<string | null>(null);
-  const [actionNotice, setActionNotice] = useState<string | null>(null);
-  const [toastLeaving, setToastLeaving] = useState(false);
+  const { actionError, actionNotice, setActionError, setActionNotice, toastLeaving } =
+    useToast({ visibleMs: actionToastVisibleMs, fadeMs: actionToastFadeMs });
 
   const friendsKey = queryKeys.accountabilityFriends();
   const inviteStatusKey = queryKeys.accountabilityInviteCodeStatus();
@@ -442,28 +442,6 @@ export function AccountabilityPage() {
       setInviteCodeModalOpen(true);
     }
   }, [friendsQuery.isSuccess, hasWatchingFriends, location.pathname, navigate]);
-
-  useEffect(() => {
-    if (!actionError && !actionNotice) {
-      return undefined;
-    }
-
-    setToastLeaving(false);
-
-    const fadeTimer = window.setTimeout(() => {
-      setToastLeaving(true);
-    }, actionToastVisibleMs);
-    const clearTimer = window.setTimeout(() => {
-      setActionError(null);
-      setActionNotice(null);
-      setToastLeaving(false);
-    }, actionToastVisibleMs + actionToastFadeMs);
-
-    return () => {
-      window.clearTimeout(fadeTimer);
-      window.clearTimeout(clearTimer);
-    };
-  }, [actionError, actionNotice]);
 
   const summaryKey = useMemo(() => {
     if (!summaryRequest) {

@@ -32,6 +32,7 @@ import { ApiClientError } from "../shared/api/client";
 import { getErrorMessage } from "../shared/api/errors";
 import { queryKeys } from "../shared/queryKeys";
 import { PageHeader } from "../shared/ui/PageHeader";
+import { usePageGate } from "../shared/ui/usePageGate";
 import styles from "./ReflectionPage.module.css";
 
 type DailyReflectionFormState = {
@@ -108,6 +109,10 @@ export function ReflectionPage() {
     enabled: Boolean(token),
     queryFn: ({ signal }) => getHomeToday({ signal, token }),
     queryKey: homeTodayKey,
+  });
+  const home = homeQuery.data;
+  const shouldRedirectToOnboarding = usePageGate({
+    behaviorProfile: home?.behaviorProfile,
   });
   const targetDate = dateOverride ?? homeQuery.data?.targetDate ?? "";
   const dailyReflectionKey = queryKeys.dailyReflection(targetDate);
@@ -344,12 +349,11 @@ export function ReflectionPage() {
     );
   }
 
-  const home = homeQuery.data;
   if (!home) {
     return null;
   }
 
-  if (home.behaviorProfile === null) {
+  if (shouldRedirectToOnboarding) {
     return <Navigate to="/onboarding" replace />;
   }
 

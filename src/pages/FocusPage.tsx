@@ -34,6 +34,7 @@ import {
 import { getErrorMessage } from "../shared/api/errors";
 import { queryKeys } from "../shared/queryKeys";
 import { PageHeader } from "../shared/ui/PageHeader";
+import { usePageGate } from "../shared/ui/usePageGate";
 import styles from "./FocusPage.module.css";
 
 type FocusPreset = 3 | 5 | 10 | 25;
@@ -77,6 +78,45 @@ function writeRecoveryDismissedDate(targetDate: string) {
   }
 }
 
+const localFocusStartedAtStorageKey = "movra.focus.localFocusStartedAt";
+
+function readLocalFocusStartedAt(): number | null {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  try {
+    const raw = window.sessionStorage.getItem(localFocusStartedAtStorageKey);
+    if (!raw) {
+      return null;
+    }
+
+    const parsed = Number(raw);
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeLocalFocusStartedAt(startedAt: number | null) {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  try {
+    if (startedAt === null) {
+      window.sessionStorage.removeItem(localFocusStartedAtStorageKey);
+    } else {
+      window.sessionStorage.setItem(
+        localFocusStartedAtStorageKey,
+        String(startedAt),
+      );
+    }
+  } catch {
+    // Persisting the open focus timer is best-effort; ignore storage errors.
+  }
+}
+
 function isFocusPreset(value: number): value is FocusPreset {
   return focusPresetOptions.includes(value as FocusPreset);
 }
@@ -107,10 +147,10 @@ function getElapsedSeconds({
     return session.elapsedSeconds;
   }
 
-  return Math.max(
-    session.elapsedSeconds,
-    session.elapsedSeconds + Math.floor((now - queriedAtTime) / 1000),
-  );
+  // Client/server clock skew can make `now` precede `queriedAt`; clamp the
+  // live extrapolation so the timer never runs below the server-reported value.
+  const extraSeconds = Math.max(0, Math.floor((now - queriedAtTime) / 1000));
+  return session.elapsedSeconds + extraSeconds;
 }
 
 function formatClock(totalSeconds: number) {
@@ -429,7 +469,7 @@ export function FocusPage() {
   const queryClient = useQueryClient();
   const [selectedFocusMode, setSelectedFocusMode] = useState<FocusMode>(5);
   const [localFocusStartedAt, setLocalFocusStartedAt] = useState<number | null>(
-    null,
+    () => readLocalFocusStartedAt(),
   );
   const [actionError, setActionError] = useState<string | null>(null);
   const [actionNotice, setActionNotice] = useState<string | null>(null);
@@ -451,6 +491,10 @@ export function FocusPage() {
     enabled: Boolean(token),
     queryFn: ({ signal }) => getHomeToday({ signal, token }),
     queryKey: homeTodayKey,
+  });
+  const home = homeQuery.data;
+  const shouldRedirectToOnboarding = usePageGate({
+    behaviorProfile: home?.behaviorProfile,
   });
   const focusSessionsQuery = useQuery({
     enabled: Boolean(token),
@@ -729,12 +773,11 @@ export function FocusPage() {
     );
   }
 
-  const home = homeQuery.data;
   if (!home || !focusSessions) {
     return null;
   }
 
-  if (home.behaviorProfile === null) {
+  if (shouldRedirectToOnboarding) {
     return <Navigate to="/onboarding" replace />;
   }
 
@@ -788,7 +831,9 @@ export function FocusPage() {
 
   function handleStartFocus() {
     if (selectedFocusMode === "OPEN") {
-      setLocalFocusStartedAt(Date.now());
+      const startedAt = Date.now();
+      setLocalFocusStartedAt(startedAt);
+      writeLocalFocusStartedAt(startedAt);
       setActionError(null);
       setActionNotice("계속 Focus를 시작했습니다. 이 타이머는 아직 서버에 기록되지 않습니다.");
       return;
@@ -800,6 +845,7 @@ export function FocusPage() {
   function handleStopFocus() {
     if (localFocusing) {
       setLocalFocusStartedAt(null);
+      writeLocalFocusStartedAt(null);
       setActionError(null);
       setActionNotice("계속 Focus를 멈췄습니다.");
       return;

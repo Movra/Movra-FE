@@ -33,6 +33,8 @@ import type {
 import { getErrorMessage } from "../shared/api/errors";
 import { queryKeys } from "../shared/queryKeys";
 import { PageHeader } from "../shared/ui/PageHeader";
+import { usePageGate } from "../shared/ui/usePageGate";
+import { useToast } from "../shared/ui/useToast";
 import styles from "./PlanningPage.module.css";
 
 const homeTodayKey = queryKeys.homeToday();
@@ -277,9 +279,8 @@ export function PlanningPage() {
   const [selectedTaskId, setSelectedTaskId] = useState("");
   const [estimatedMinutes, setEstimatedMinutes] = useState<number>(80);
   const [topPickMemo, setTopPickMemo] = useState("");
-  const [actionError, setActionError] = useState<string | null>(null);
-  const [actionNotice, setActionNotice] = useState<string | null>(null);
-  const [toastLeaving, setToastLeaving] = useState(false);
+  const { actionError, actionNotice, setActionError, setActionNotice, toastLeaving } =
+    useToast({ visibleMs: toastVisibleMs, fadeMs: toastFadeMs });
 
   const homeQuery = useQuery({
     enabled: Boolean(token),
@@ -299,6 +300,11 @@ export function PlanningPage() {
   });
 
   const home = homeQuery.data;
+  const shouldRedirectToOnboarding = usePageGate({
+    behaviorProfile: home?.behaviorProfile,
+    queriedBehaviorProfile: behaviorProfileQuery.data,
+    queriedBehaviorProfileFailed: behaviorProfileQuery.isError,
+  });
   const dailyPlan = dailyPlanQuery.data ?? home?.todayDailyPlan ?? null;
   const dailyPlanId = dailyPlan?.dailyPlanId ?? "";
   const tasks = useMemo(() => dailyPlan?.tasks ?? [], [dailyPlan?.tasks]);
@@ -375,28 +381,6 @@ export function PlanningPage() {
     setTopPickMemo(selectedTaskTopPick?.memo ?? selectedTask.topPickDetail?.memo ?? "");
   }, [selectedTask, selectedTaskTopPick]);
 
-  useEffect(() => {
-    if (!actionError && !actionNotice) {
-      return undefined;
-    }
-
-    setToastLeaving(false);
-
-    const fadeTimer = window.setTimeout(() => {
-      setToastLeaving(true);
-    }, toastVisibleMs);
-    const clearTimer = window.setTimeout(() => {
-      setActionError(null);
-      setActionNotice(null);
-      setToastLeaving(false);
-    }, toastVisibleMs + toastFadeMs);
-
-    return () => {
-      window.clearTimeout(fadeTimer);
-      window.clearTimeout(clearTimer);
-    };
-  }, [actionError, actionNotice]);
-
   async function refreshHome() {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: homeTodayKey }),
@@ -405,13 +389,11 @@ export function PlanningPage() {
   }
 
   function handleMutationError(error: unknown) {
-    setToastLeaving(false);
     setActionNotice(null);
     setActionError(getErrorMessage(error));
   }
 
   function handleMutationNotice(message: string) {
-    setToastLeaving(false);
     setActionError(null);
     setActionNotice(message);
   }
@@ -578,11 +560,7 @@ export function PlanningPage() {
     return null;
   }
 
-  if (
-    home.behaviorProfile === null ||
-    behaviorProfileQuery.data === null ||
-    behaviorProfileQuery.isError
-  ) {
+  if (shouldRedirectToOnboarding) {
     return <Navigate to="/onboarding" replace />;
   }
 

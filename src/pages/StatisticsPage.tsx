@@ -29,6 +29,7 @@ import {
 import { getErrorMessage } from "../shared/api/errors";
 import { queryKeys } from "../shared/queryKeys";
 import { PageHeader } from "../shared/ui/PageHeader";
+import { usePageGate } from "../shared/ui/usePageGate";
 import styles from "./StatisticsPage.module.css";
 
 const homeTodayKey = queryKeys.homeToday();
@@ -532,6 +533,10 @@ export function StatisticsPage() {
     queryFn: ({ signal }) => getHomeToday({ signal, token }),
     queryKey: homeTodayKey,
   });
+  const home = homeQuery.data;
+  const shouldRedirectToOnboarding = usePageGate({
+    behaviorProfile: home?.behaviorProfile,
+  });
 
   useEffect(() => {
     if (homeQuery.data?.targetDate && targetDate === "") {
@@ -591,13 +596,11 @@ export function StatisticsPage() {
     );
   }
 
-  const home = homeQuery.data;
-
   if (!home) {
     return null;
   }
 
-  if (home.behaviorProfile === null) {
+  if (shouldRedirectToOnboarding) {
     return <Navigate to="/onboarding" replace />;
   }
 
